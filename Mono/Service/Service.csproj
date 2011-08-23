@@ -39,4 +39,10 @@
     <Compile Include="AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <ProjectReference Include="..\clrzmq\clrzmq.csproj">
+      <Project>{FE6D6CDD-8A04-4A3A-A654-5C687AB724E3}</Project>
+      <Name>clrzmq</Name>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

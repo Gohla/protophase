@@ -5,10 +5,10 @@
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{ABE3F263-438D-424E-870C-50A7CB134DC2}</ProjectGuid>
+    <ProjectGuid>{F0375E71-0E7C-4C33-8331-06B45FB57217}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Registry</RootNamespace>
-    <AssemblyName>Registry</AssemblyName>
+    <RootNamespace>TestServiceServer</RootNamespace>
+    <AssemblyName>TestServiceServer</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
@@ -43,6 +43,10 @@
     <ProjectReference Include="..\clrzmq\clrzmq.csproj">
       <Project>{FE6D6CDD-8A04-4A3A-A654-5C687AB724E3}</Project>
       <Name>clrzmq</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Service\Service.csproj">
+      <Project>{3509E6B7-1F72-4FE8-B324-015437DD679A}</Project>
+      <Name>Service</Name>
     </ProjectReference>
   </ItemGroup>
 </Project>
