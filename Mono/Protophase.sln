@@ -5,11 +5,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Registry", "Registry\Regist
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Service", "Service\Service.csproj", "{3509E6B7-1F72-4FE8-B324-015437DD679A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "clrzmq", "clrzmq\clrzmq.csproj", "{FE6D6CDD-8A04-4A3A-A654-5C687AB724E3}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestServiceServer", "TestServiceServer\TestServiceServer.csproj", "{F0375E71-0E7C-4C33-8331-06B45FB57217}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestServiceClient", "TestServiceClient\TestServiceClient.csproj", "{A05F711C-DDF4-495D-9CA6-4B3F830D21A6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{99F7124A-12ED-4DF6-8470-145F01C23425}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "clrzmq", "clrzmq\clrzmq.csproj", "{FE6D6CDD-8A04-4A3A-A654-5C687AB724E3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -94,8 +96,11 @@ Global
 		{FE6D6CDD-8A04-4A3A-A654-5C687AB724E3}.WIN_RELEASE|x86.ActiveCfg = WIN_RELEASE|x86
 		{FE6D6CDD-8A04-4A3A-A654-5C687AB724E3}.WIN_RELEASE|x86.Build.0 = WIN_RELEASE|x86
 	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FE6D6CDD-8A04-4A3A-A654-5C687AB724E3} = {99F7124A-12ED-4DF6-8470-145F01C23425}
+	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = Registry\Registry.csproj
+		StartupItem = TestServiceServer\TestServiceServer.csproj
 		Policies = $0
 		$0.DotNetNamingPolicy = $1
 		$1.DirectoryNamespaceAssociation = None
@@ -107,8 +112,6 @@ Global
 		$2.inheritsScope = text/plain
 		$2.scope = text/x-csharp
 		$0.CSharpFormattingPolicy = $3
-		$3.IndentNamespaceBody = False
-		$3.IndentMethodBody = False
 		$3.IndentSwitchBody = True
 		$3.NamespaceBraceStyle = EndOfLine
 		$3.ClassBraceStyle = EndOfLine
