@@ -1,9 +1,10 @@
 using System;
 
-namespace Registry {
-class MainClass {
-    public static void Main(string[] args) {
-        Console.WriteLine("Hello World!");
+namespace Protophase.Registry {
+    class MainClass {
+        public static void Main(string[] args) {
+            Server server = new Server("tcp://*:5555");
+            server.Start();
+        }
     }
-}
 }
