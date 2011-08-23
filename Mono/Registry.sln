@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Registry", "Registry\Registry.csproj", "{ABE3F263-438D-424E-870C-50A7CB134DC2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Service", "Service\Service.csproj", "{3509E6B7-1F72-4FE8-B324-015437DD679A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3509E6B7-1F72-4FE8-B324-015437DD679A}.Debug|x86.ActiveCfg = Debug|x86
+		{3509E6B7-1F72-4FE8-B324-015437DD679A}.Debug|x86.Build.0 = Debug|x86
+		{3509E6B7-1F72-4FE8-B324-015437DD679A}.Release|x86.ActiveCfg = Release|x86
+		{3509E6B7-1F72-4FE8-B324-015437DD679A}.Release|x86.Build.0 = Release|x86
+		{ABE3F263-438D-424E-870C-50A7CB134DC2}.Debug|x86.ActiveCfg = Debug|x86
+		{ABE3F263-438D-424E-870C-50A7CB134DC2}.Debug|x86.Build.0 = Debug|x86
+		{ABE3F263-438D-424E-870C-50A7CB134DC2}.Release|x86.ActiveCfg = Release|x86
+		{ABE3F263-438D-424E-870C-50A7CB134DC2}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Registry\Registry.csproj
+	EndGlobalSection
+EndGlobal
