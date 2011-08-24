@@ -23,33 +23,34 @@ namespace Protophase.Registry {
                     
                     while(true) {
                         // Wait for next message from a client.
-                        byte[] message = socket.Recv();
-                        MemoryStream stream = new MemoryStream(message);
+                        MemoryStream stream = StreamUtil.CreateStream(socket.Recv());
 
                         // Get the message type.
                         RegistryMessageType type = (RegistryMessageType)stream.ReadByte();
 
                         // Execute command
                         switch(type) {
-                            case RegistryMessageType.AddService: {
+                            case RegistryMessageType.RegisterService: {
                                 ServiceInfo serviceInfo = StreamUtil.Read<ServiceInfo>(stream);
-                                AddService(serviceInfo);
 
-                                socket.Send();
-
-                                break;
-                            }
-                            case RegistryMessageType.RemoveService: {
-                                String guid = StreamUtil.Read<String>(stream);
-                                RemoveService(guid);
-
-                                socket.Send();
+                                MemoryStream sendStream = new MemoryStream();
+                                StreamUtil.WriteBool(sendStream, Register(serviceInfo));
+                                socket.Send(sendStream.GetBuffer());
 
                                 break;
                             }
-                            case RegistryMessageType.FindByGUID: {
-                                String guid = StreamUtil.Read<String>(stream);
-                                ServiceInfo serviceInfo = FindService(guid);
+                            case RegistryMessageType.UnregisterService: {
+                                String uid = StreamUtil.Read<String>(stream);
+
+                                MemoryStream sendStream = new MemoryStream();
+                                StreamUtil.WriteBool(sendStream,  Unregister(uid));
+                                socket.Send(sendStream.GetBuffer());
+
+                                break;
+                            }
+                            case RegistryMessageType.FindByUID: {
+                                String uid = StreamUtil.Read<String>(stream);
+                                ServiceInfo serviceInfo = FindByUID(uid);
 
                                 MemoryStream sendStream = new MemoryStream();
                                 StreamUtil.WriteWithNullCheck<ServiceInfo>(sendStream, serviceInfo);
@@ -67,7 +68,9 @@ namespace Protophase.Registry {
             }
         }
 
-        private void AddService(ServiceInfo serviceInfo) {
+        private bool Register(ServiceInfo serviceInfo) {
+            if(_servicesByUID.ContainsKey(serviceInfo.UID)) return false;
+
             _servicesByUID.Add(serviceInfo.UID, serviceInfo);
 
             Dictionary<String, ServiceInfo> dict;
@@ -80,25 +83,31 @@ namespace Protophase.Registry {
             }
 
             Console.WriteLine("Added service: " + serviceInfo);
+
+            return true;
         }
 
-        private void RemoveService(String guid) {
+        private bool Unregister(String uid) {
             ServiceInfo serviceInfo;
-            if(_servicesByUID.TryGetValue(guid, out serviceInfo)) {
-                _servicesByUID.Remove(guid);
+            if(_servicesByUID.TryGetValue(uid, out serviceInfo)) {
+                _servicesByUID.Remove(uid);
 
                 Dictionary<String, ServiceInfo> dict;
                 if(_servicesByType.TryGetValue(serviceInfo.Type, out dict)) {
-                    dict.Remove(guid);
+                    dict.Remove(uid);
                 }
+
+                Console.WriteLine("Removed service: " + serviceInfo);
+
+                return true;
             }
 
-            Console.WriteLine("Removed service: " + serviceInfo);
+            return false;
         }
 
-        private ServiceInfo FindService(String guid) {
+        private ServiceInfo FindByUID(String uid) {
             ServiceInfo serviceInfo;
-            if(_servicesByUID.TryGetValue(guid, out serviceInfo)) {
+            if(_servicesByUID.TryGetValue(uid, out serviceInfo)) {
                 return serviceInfo;
             }
 
