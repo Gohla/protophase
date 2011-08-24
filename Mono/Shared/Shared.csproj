@@ -35,6 +35,8 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="ServiceInfo.cs" />
+    <Compile Include="StreamUtil.cs" />
+    <Compile Include="RegistryMessageType.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

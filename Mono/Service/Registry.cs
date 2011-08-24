@@ -18,13 +18,12 @@ namespace Protophase.Service {
         }
 
         public void Register(ServiceInfo serviceInfo) {
-            BinaryFormatter sendFormatter = new BinaryFormatter();
-            MemoryStream sendStream = new MemoryStream();
-            sendFormatter.Serialize(sendStream, serviceInfo);
+            MemoryStream stream = new MemoryStream();
+            stream.WriteByte((byte)RegistryMessageType.AddService);
+            StreamUtil.Write<ServiceInfo>(stream, serviceInfo);
 
-            _socket.Send(sendStream.GetBuffer());
+            _socket.Send(stream.GetBuffer());
             _socket.Recv();
         }
     }
 }
-
