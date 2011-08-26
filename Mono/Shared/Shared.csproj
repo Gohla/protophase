@@ -31,12 +31,16 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Core">
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="ServiceInfo.cs" />
     <Compile Include="StreamUtil.cs" />
     <Compile Include="RegistryMessageType.cs" />
+    <Compile Include="AvailablePort.cs" />
+    <Compile Include="Attributes.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

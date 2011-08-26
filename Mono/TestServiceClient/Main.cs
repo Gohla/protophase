@@ -1,25 +1,35 @@
 using System;
-using System.Text;
+using System.Threading;
 using Protophase.Service;
 using Protophase.Shared;
 using ZMQ;
 
 namespace TestServiceClient {
-    class MainClass {
+    static class MainClass {
+        private static bool quit = false;
+
         public static void Main(string[] args) {
-            ServiceInfo info = new ServiceInfo("Troll", "TrollServ", "1.0", "tcp://localhost:6666");
+            // Get console quit key press events.
+            Console.CancelKeyPress += CancelKeyPressHandler;
+
+            // Create registry client for registry at address tcp://localhost:5555.
             Registry registry = new Registry("tcp://localhost:5555");
 
-            Console.WriteLine("Registering service: " + info);
-            if(!registry.Register(info)) Console.WriteLine("Registration failed");
+            // Get HelloWorldResponder service
+            Service helloWorld = registry.GetService("HelloWorldResponder");
+            Console.WriteLine("Found HelloWorldResponder: " + helloWorld);
 
-            Console.WriteLine("Search for service: " + info.UID);
-            ServiceInfo serviceInfo = registry.FindByUID(info.UID);
-            if(serviceInfo != null) Console.WriteLine("Found service: " + serviceInfo);
-            else Console.WriteLine("Service not found");
+            // Call HelloWorld function on HelloWorldResponder until quitting.
+            while(!quit) {
+                helloWorld.Call("HelloWorld");
+                Thread.Sleep(10);
+            }
+        }
 
-            Console.WriteLine("Unregistering service: " + info.UID);
-            if(!registry.Unregister(info.UID)) Console.WriteLine("Unregistratation failed");
+        // Handler for console cancel key presses.
+        private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs args) {
+            args.Cancel = true; // Cancel quitting, do our own quitting.
+            quit = true;
         }
     }
 }

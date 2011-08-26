@@ -1,7 +1,7 @@
 using System;
-using System.Threading;
 using System.IO;
 using System.Collections.Generic;
+using System.Threading;
 using Protophase.Shared;
 using ZMQ;
 
@@ -25,7 +25,7 @@ namespace Protophase.Registry {
                         // Wait for next message from a client.
                         MemoryStream stream = StreamUtil.CreateStream(socket.Recv());
 
-                        // Get the message type.
+                        // Read message type
                         RegistryMessageType type = (RegistryMessageType)stream.ReadByte();
 
                         // Execute command
@@ -43,7 +43,7 @@ namespace Protophase.Registry {
                                 String uid = StreamUtil.Read<String>(stream);
 
                                 MemoryStream sendStream = new MemoryStream();
-                                StreamUtil.WriteBool(sendStream,  Unregister(uid));
+                                StreamUtil.WriteBool(sendStream, Unregister(uid));
                                 socket.Send(sendStream.GetBuffer());
 
                                 break;

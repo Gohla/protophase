@@ -1,30 +1,56 @@
 using System;
-using System.Text;
 using System.Threading;
+using Protophase.Service;
+using Protophase.Shared;
 using ZMQ;
 
 namespace TestServiceServer {
-    class MainClass {
+    static class MainClass {
+        static bool quit = false;
+
         public static void Main(string[] args) {
-            // ZMQ Context
-            using(Context context = new Context(1)) {
-                // Socket to talk to clients
-                using(Socket socket = context.Socket(SocketType.REP)) {
-                    socket.Bind("tcp://*:5555");
-                    
-                    while(true) {
-                        // Wait for next request from client
-                        string message = socket.Recv(Encoding.Unicode);
-                        Console.WriteLine("Received request: {0}", message);
-                        
-                        // Do Some 'work'
-                        Thread.Sleep(1000);
-                        
-                        // Send reply back to client
-                        socket.Send("World", Encoding.Unicode);
-                    }
-                }
+            // Get console quit key press events.
+            Console.CancelKeyPress += CancelKeyPressHandler;
+
+            // Create registry client for registry at address tcp://localhost:5555.
+            Registry registry = new Registry("tcp://localhost:5555");
+
+            // Register our hello world responer object with the registry.
+            HelloWorldResponder responder = new HelloWorldResponder();
+            if(registry.Register("HelloWorldResponder", responder))
+                Console.WriteLine("Registered HelloWorldResponder");
+            else {
+                Console.WriteLine("Failed to register HelloWorldResponder");
+                return;
             }
+
+            // Receive messages until quitting.
+            while(!quit) {
+                registry.Receive();
+                Thread.Sleep(10);
+            }
+
+            // Unregister object
+            if(registry.Unregister("HelloWorldResponder"))
+                Console.WriteLine("Unregistered HelloWorldResponder");
+            else
+                Console.WriteLine("Failed to unregister HelloWorldResponder");
+        }
+
+        // Handler for console cancel key presses.
+        private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs args) {
+            args.Cancel = true; // Cancel quitting, do our own quitting.
+            quit = true;
+        }
+    }
+
+    // Simple hello world responder.
+    [ServiceType("HelloWorld"), ServiceVersion("0.1")]
+    public class HelloWorldResponder {
+        [RPC]
+        public String HelloWorld() {
+            Console.WriteLine("Hello");
+            return "World";
         }
     }
 }
