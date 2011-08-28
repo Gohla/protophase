@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using Protophase.Service;
 using Protophase.Shared;
-using ZMQ;
 
 namespace TestServiceServer {
     static class MainClass {
@@ -51,6 +50,11 @@ namespace TestServiceServer {
         public String HelloWorld() {
             Console.WriteLine("Hello");
             return "World";
+        }
+
+        [RPC]
+        public String ReturnParam(int par1, float par2, String par3) {
+            return par1 + " " + par2 + " " + par3;
         }
     }
 }

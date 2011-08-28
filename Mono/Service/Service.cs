@@ -20,19 +20,27 @@ namespace Protophase.Service {
             _socket.Connect(_serviceInfo.Address);
         }
 
-        public void Call(String name) {
+        public object Call(String name, params object[] pars) {
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
             // Write UID method name
             // TODO: Validate method name
-            StreamUtil.Write<String>(stream, _serviceInfo.UID);
-            StreamUtil.Write<String>(stream, name);
+            StreamUtil.Write(stream, _serviceInfo.UID);
+            StreamUtil.Write(stream, name);
+            StreamUtil.Write(stream, pars);
 
             // Send to object and await response.
             _socket.Send(stream.GetBuffer());
-            // TODO: Method return value
+            // Receive return value
             // TODO: Make timeout configurable
-            _socket.Recv(1000);
+            byte[] message = _socket.Recv(1000);
+            if(message == null) return null;
+            MemoryStream receiveStream = StreamUtil.CreateStream(message);
+            return StreamUtil.ReadWithNullCheck<object>(receiveStream);
+        }
+
+        public T Call<T>(String name, params object[] pars) {
+            return (T)Call(name, pars);
         }
 
         public override String ToString() {

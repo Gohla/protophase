@@ -42,23 +42,31 @@ namespace Protophase.Service {
             if(message != null) {
                 MemoryStream stream = StreamUtil.CreateStream(message);
 
-                // Read UID and method name.
-                String uid = StreamUtil.Read<String>(stream);
-                String name = StreamUtil.Read<String>(stream);
-
-                // Call method on object.
-                // TODO: Method parameters
-                object obj;
-                if(_objects.TryGetValue(uid, out obj)) {
-                    // TODO: Handle incorrect method name.
-                    Type type = obj.GetType();
-                    type.GetMethod(name).Invoke(obj, new object[]{});
-                } else {
-                    // TODO: Handle incorrect UID
+                try {
+                    // Read UID, method name and parameters.
+                    String uid = StreamUtil.Read<String>(stream);
+                    String name = StreamUtil.Read<String>(stream);
+                    object[] pars = StreamUtil.Read<object[]>(stream);
+    
+                    // Call method on object.
+                    object obj;
+                    object ret = null;
+                    if(_objects.TryGetValue(uid, out obj)) {
+                        // TODO: Handle incorrect method name.
+                        Type type = obj.GetType();
+                        ret = type.GetMethod(name).Invoke(obj, pars);
+                    } else {
+                        // TODO: Handle incorrect UID
+                    }
+    
+                    // Send return value (or null if no value was returned)
+                    MemoryStream sendStream = new MemoryStream();
+                    StreamUtil.WriteWithNullCheck(sendStream, ret);
+                    _localRPCSocket.Send(sendStream.GetBuffer());
+                } catch(System.Exception e) {
+                    Console.WriteLine("RPC failed:" + e.Message + "\n" + e.StackTrace);
+                    _localRPCSocket.Send();
                 }
-
-                // TODO: Method return value
-                _localRPCSocket.Send();
             }
         }
 
