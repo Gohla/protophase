@@ -7,38 +7,67 @@ using ZMQ;
 
 namespace Protophase.Service {
     public class Registry {
-        private String _registryAddress;
-        private Socket _registrySocket;
-        private String _listenRPCAddress;
-        private String _remoteRPCAddress;
-        private Socket _localRPCSocket;
         private Context _context = new Context(1);
         private Dictionary<String, object> _objects = new Dictionary<String, object>();
 
+        private String _registryAddress;
+        private Socket _registrySocket;
+
+        private String _remoteAddress;
+
+        private ushort _incomingRPCPort;
+        private Socket _incomingRPCSocket;
+
+        private Dictionary<String, Socket> _publishSockets = new Dictionary<String, Socket>();
+        private static ushort _nextPublishPort = 1338;
+
         public Registry(String registryAddress) {
             _registryAddress = registryAddress;
-            int port = AvailablePort.Find(6666);
-            _remoteRPCAddress = "tcp://localhost:" + port;
-            _listenRPCAddress = "tcp://*:" + port;
-            Connect();
+            _remoteAddress = "localhost";
+
+            _incomingRPCPort = 1337;
+
+            ConnectRegistry();
         }
 
-        public Registry(String registryAddress, String listenRPCAddress, String remoteRPCAddress) {
+        public Registry(String registryAddress, String remoteAddress, ushort bindRPCPort, ushort bindPublishPort) {
             _registryAddress = registryAddress;
-            _listenRPCAddress = listenRPCAddress;
-            _remoteRPCAddress = remoteRPCAddress;
-            Connect();
+            _remoteAddress = remoteAddress;
+
+            _incomingRPCPort = bindRPCPort;
+
+            ConnectRegistry();
         }
 
-        private void Connect() {
+        private void ConnectRegistry() {
+            if(_registrySocket != null) return;
             _registrySocket = _context.Socket(SocketType.REQ);
             _registrySocket.Connect(_registryAddress);
-            _localRPCSocket = _context.Socket(SocketType.REP);
-            _localRPCSocket.Bind(_listenRPCAddress);
+        }
+
+        private void BindRPC() {
+            if(_incomingRPCSocket != null) return;
+            _incomingRPCPort = AvailablePort.Find(_incomingRPCPort);
+            _incomingRPCSocket = _context.Socket(SocketType.REP);
+            _incomingRPCSocket.Bind("tcp://*:" + _incomingRPCPort);
+        }
+
+        private ushort BindPublish(String uid) {
+            if(!_publishSockets.ContainsKey(uid)) {
+                Socket socket = _context.Socket(SocketType.PUB);
+                _nextPublishPort = AvailablePort.Find(_nextPublishPort);
+                socket.Bind("tcp://*:" + _nextPublishPort);
+
+                _publishSockets.Add(uid, socket);
+
+                return _nextPublishPort++;
+            }
+
+            return 0;
         }
 
         public void Receive() {
-            byte[] message = _localRPCSocket.Recv(SendRecvOpt.NOBLOCK);
+            byte[] message = _incomingRPCSocket.Recv(SendRecvOpt.NOBLOCK);
             if(message != null) {
                 MemoryStream stream = StreamUtil.CreateStream(message);
 
@@ -62,16 +91,22 @@ namespace Protophase.Service {
                     // Send return value (or null if no value was returned)
                     MemoryStream sendStream = new MemoryStream();
                     StreamUtil.WriteWithNullCheck(sendStream, ret);
-                    _localRPCSocket.Send(sendStream.GetBuffer());
+                    _incomingRPCSocket.Send(sendStream.GetBuffer());
                 } catch(System.Exception e) {
                     Console.WriteLine("RPC failed:" + e.Message + "\n" + e.StackTrace);
-                    _localRPCSocket.Send();
+
+                    // Send back empty reply so that the client doesn't time out.
+                    _incomingRPCSocket.Send();
                 }
             }
         }
 
         public bool Register<T>(String uid, T obj) {
             Type type = typeof(T);
+
+            // Bind RPC and publish sockets.
+            BindRPC();
+            ushort publishPort = BindPublish(uid);
 
             // Get service type and version.
             ServiceType[] serviceTypes = type.GetCustomAttributes(typeof(ServiceType), true) as ServiceType[];
@@ -89,7 +124,8 @@ namespace Protophase.Service {
                 }
             }
 
-            ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, _remoteRPCAddress, rpcMethods);
+            ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, _remoteAddress,
+                                                      _incomingRPCPort, publishPort, rpcMethods);
 
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
@@ -152,6 +188,19 @@ namespace Protophase.Service {
             if(serviceInfo == null) return null;
 
             return new Service(serviceInfo, _context);
+        }
+
+        public void Publish(String uid, object obj) {
+            Socket socket;
+            if(_publishSockets.TryGetValue(uid, out socket)) {
+                // Serialize to binary
+                MemoryStream stream = new MemoryStream();
+                // Write object
+                StreamUtil.Write(stream, obj);
+
+                // Publish data
+                socket.Send(stream.GetBuffer());
+            }
         }
     }
 }

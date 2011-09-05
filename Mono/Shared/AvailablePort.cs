@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Protophase.Shared {
     public static class AvailablePort {
-        public static int Find(int minimalPort) {
+        public static ushort Find(ushort minimalPort) {
             List<int> portArray = new List<int>();
             IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
             
@@ -32,7 +32,7 @@ namespace Protophase.Shared {
             
             for(int i = minimalPort; i < UInt16.MaxValue; i++)
                 if(!portArray.Contains(i))
-                    return i;
+                    return (ushort)i;
             
             return 0;
         }

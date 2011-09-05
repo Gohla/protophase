@@ -15,14 +15,25 @@ namespace TestServiceClient {
                 // Create registry client for registry at address tcp://localhost:5555.
                 Registry registry = new Registry("tcp://localhost:5555");
     
-                // Get HelloWorldResponder service
-                Service helloWorld = registry.GetService("HelloWorldResponder");
+                // Get HelloWorldResponder service, loop until it exists.
+                Service helloWorld = null;
+                while(helloWorld == null) helloWorld = registry.GetService("HelloWorldResponder");
                 Console.WriteLine("Found HelloWorldResponder: " + helloWorld);
+
+                // Subscribe for published event.
+                helloWorld.Published += (object obj) => Console.WriteLine("Published: " + obj);
     
-                // Call HelloWorld function on HelloWorldResponder until quitting.
+                // Program loop
                 while(!quit) {
+                    // Call receive on the object to receive published messages.
+                    // TODO: Optionally let the library take care of this.
+                    helloWorld.Receive();
+
+                    // RPC HelloWorld function with no parameters and print the result.
                     Console.WriteLine(helloWorld.Call<String>("HelloWorld"));
+                    // RPC ReturnParam function with 3 params and print the result.
                     Console.WriteLine(helloWorld.Call<String>("ReturnParam", 1, 1.0f, "one"));
+
                     Thread.Sleep(10);
                 }
             } catch(Exception e) {

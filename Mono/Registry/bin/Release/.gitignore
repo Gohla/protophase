@@ -1,3 +1,5 @@
 
 *.exe
 *.dll
+*.manifest
+*.pdb

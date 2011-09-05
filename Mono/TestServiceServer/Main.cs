@@ -23,9 +23,16 @@ namespace TestServiceServer {
                 return;
             }
 
-            // Receive messages until quitting.
+            // Program loop
             while(!quit) {
+                // Publish a String object.
+                // TODO: Publishing should be moved to the service object.
+                registry.Publish("HelloWorldResponder", "Hello world!");
+
+                // Receive RPC calls
+                // TODO: Optionally let the library take care of this.
                 registry.Receive();
+
                 Thread.Sleep(10);
             }
 

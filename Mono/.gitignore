@@ -1,2 +1,5 @@
 
 *.userprefs
+*.suo
+*.user
+*.pdb
