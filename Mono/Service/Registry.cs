@@ -71,6 +71,7 @@ namespace Protophase.Service {
             UnregisterAll();
             if(_incomingRPCSocket != null) _incomingRPCSocket.Dispose();
             _registrySocket.Dispose();
+            _context.Dispose();
 
             GC.SuppressFinalize(this);
         }
