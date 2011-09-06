@@ -189,6 +189,15 @@ namespace Protophase.Service {
                 }
             }
 
+            // Subscribe to publisher events.
+            EventInfo[] events = type.GetEvents();
+            foreach(EventInfo evt in events) {
+                if(evt.GetCustomAttributes(typeof(Publisher), true).Length > 0) {
+                    PublishedEvent pubDelegate = (object pubObj) => Publish(uid, pubObj);
+                    evt.AddEventHandler(obj, pubDelegate);
+                }
+            }
+
             ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, _remoteAddress,
                                                       _incomingRPCPort, publishPort, rpcMethods);
 
@@ -241,6 +250,9 @@ namespace Protophase.Service {
 
                 // Update own object dictionary.
                 _objects.Remove(uid);
+
+                // TODO: Unsubscribe from publish events.
+
                 return true;
             }
 

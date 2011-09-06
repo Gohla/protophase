@@ -5,13 +5,6 @@ using ZMQ;
 
 namespace Protophase.Service {
     /**
-    Delegate used for receiving published messages from a remote service.
-    
-    @param  obj The object that was published.
-    **/
-    public delegate void PublishedEvent(object obj);
-
-    /**
     Generic remote service, used to receive published messages and send RPC requests to remote services.
     **/
     public class Service : IDisposable {

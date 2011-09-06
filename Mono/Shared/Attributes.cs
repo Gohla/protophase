@@ -8,6 +8,12 @@ namespace Protophase.Shared {
     public class RPC : Attribute {}
 
     /**
+    Event attribute to indicate that this event is called when a message must be published.
+    **/
+    [AttributeUsage(AttributeTargets.Event)]
+    public class Publisher : Attribute {}
+
+    /**
     Class attribute to denote the type of the service.
     **/
     [AttributeUsage(AttributeTargets.Class|AttributeTargets.Struct)]

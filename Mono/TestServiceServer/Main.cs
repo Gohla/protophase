@@ -24,9 +24,8 @@ namespace TestServiceServer {
 
                 // Program loop
                 while(!quit) {
-                    // Publish a String object.
-                    // TODO: Publishing should be moved to the service object.
-                    registry.Publish("HelloWorldResponder", "Hello world!");
+                    // Emit an event in the service.
+                    responder.SomethingHappened();
 
                     // Receive RPC calls
                     // TODO: Optionally let the library take care of this.
@@ -47,6 +46,11 @@ namespace TestServiceServer {
     // Simple hello world responder.
     [ServiceType("HelloWorld"), ServiceVersion("0.1")]
     public class HelloWorldResponder {
+        [Publisher]
+        public event PublishedEvent Hello;
+        [Publisher]
+        public event PublishedEvent World;
+
         [RPC]
         public String HelloWorld() {
             Console.WriteLine("Hello");
@@ -56,6 +60,11 @@ namespace TestServiceServer {
         [RPC]
         public String ReturnParam(int par1, float par2, String par3) {
             return par1 + " " + par2 + " " + par3;
+        }
+
+        public void SomethingHappened() { 
+            if(Hello != null) Hello("Hello");
+            if(World != null) World("world!");
         }
     }
 }
