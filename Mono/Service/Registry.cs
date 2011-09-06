@@ -6,6 +6,9 @@ using Protophase.Shared;
 using ZMQ;
 
 namespace Protophase.Service {
+    /**
+    Registry client that handles all communication with a registry server.
+    **/
     public class Registry {
         private Context _context = new Context(1);
         private Dictionary<String, object> _objects = new Dictionary<String, object>();
@@ -21,6 +24,12 @@ namespace Protophase.Service {
         private Dictionary<String, Socket> _publishSockets = new Dictionary<String, Socket>();
         private static ushort _nextPublishPort = 1338;
 
+        /**
+        Simple constructor.
+        
+        @param  registryAddress The (remote) address of the registry server in ZMQ socket style (e.g.
+                                tcp://localhost:5555)
+        **/
         public Registry(String registryAddress) {
             _registryAddress = registryAddress;
             _remoteAddress = "localhost";
@@ -30,6 +39,15 @@ namespace Protophase.Service {
             ConnectRegistry();
         }
 
+        /**
+        Constructor.
+        
+        @param  registryAddress The (remote) address of the registry server in ZMQ socket style (e.g.
+                                tcp://localhost:5555)
+        @param  remoteAddress   The remote address that is reported to the registry.
+        @param  bindRPCPort     The port that is used for listening to RPC requests.
+        @param  bindPublishPort The port that is used for listening to publish/subscribe requests.
+        **/
         public Registry(String registryAddress, String remoteAddress, ushort bindRPCPort, ushort bindPublishPort) {
             _registryAddress = registryAddress;
             _remoteAddress = remoteAddress;
@@ -39,12 +57,18 @@ namespace Protophase.Service {
             ConnectRegistry();
         }
 
+        /**
+        Connects to the registry server.
+        **/
         private void ConnectRegistry() {
             if(_registrySocket != null) return;
             _registrySocket = _context.Socket(SocketType.REQ);
             _registrySocket.Connect(_registryAddress);
         }
 
+        /**
+        Starts listening for RPC requests.
+        **/
         private void BindRPC() {
             if(_incomingRPCSocket != null) return;
             _incomingRPCPort = AvailablePort.Find(_incomingRPCPort);
@@ -52,6 +76,14 @@ namespace Protophase.Service {
             _incomingRPCSocket.Bind("tcp://*:" + _incomingRPCPort);
         }
 
+        /**
+        Starts listening for publish/subscribe requests for the service with given UID. If already listening for that
+        service this function will do nothing.
+        
+        @param  uid The UID of the service.
+        
+        @return The port that is used for listening, or 0 if already listening.
+        **/
         private ushort BindPublish(String uid) {
             if(!_publishSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.PUB);
@@ -66,6 +98,9 @@ namespace Protophase.Service {
             return 0;
         }
 
+        /**
+        Receives RPC requests for all services.
+        **/
         public void Receive() {
             byte[] message = _incomingRPCSocket.Recv(SendRecvOpt.NOBLOCK);
             if(message != null) {
@@ -101,6 +136,15 @@ namespace Protophase.Service {
             }
         }
 
+        /**
+        Registers given service with the registry server with a unique name.
+        
+        @tparam T   Type of the service.
+        @param  uid The UID of the service.
+        @param  obj The service object.
+        
+        @return True if service is successfully registered, false if a service with given UID already exists.
+        **/
         public bool Register<T>(String uid, T obj) {
             Type type = typeof(T);
 
@@ -147,6 +191,13 @@ namespace Protophase.Service {
             return false;
         }
 
+        /**
+        Unregisters service with given UID.
+        
+        @param  uid The UID of the service.
+        
+        @return True if service is successfully unregistered, false if service with given UID does not exists.
+        **/
         public bool Unregister(String uid) {
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
@@ -168,6 +219,13 @@ namespace Protophase.Service {
             return false;
         }
 
+        /**
+        Searches for a service by UID.
+        
+        @param  uid The UID of the service to find.
+        
+        @return The service with given UID, or null if it was not found.
+        **/
         public ServiceInfo FindByUID(String uid) {
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
@@ -183,6 +241,13 @@ namespace Protophase.Service {
             return StreamUtil.ReadWithNullCheck<ServiceInfo>(receiveStream);
         }
 
+        /**
+        Gets a remote service object by UID.
+        
+        @param  uid The UID of the service to get.
+        
+        @return The remote service object with given UID, or null if it was not found.
+        **/
         public Service GetService(String uid) {
             ServiceInfo serviceInfo = FindByUID(uid);
             if(serviceInfo == null) return null;
@@ -190,6 +255,12 @@ namespace Protophase.Service {
             return new Service(serviceInfo, _context);
         }
 
+        /**
+        Publishes an object for the service with given UID.
+        
+        @param  uid The UID of the service to publish for.
+        @param  obj The object to send as a message.
+        **/
         public void Publish(String uid, object obj) {
             Socket socket;
             if(_publishSockets.TryGetValue(uid, out socket)) {

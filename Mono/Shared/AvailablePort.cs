@@ -5,7 +5,17 @@ using System.Net;
 using System.Linq;
 
 namespace Protophase.Shared {
+    /**
+    Utility class to find available network ports.
+    **/
     public static class AvailablePort {
+        /**
+        Searches for the first available TPC/UDP port.
+        
+        @param  minimalPort The port number to start searching at.
+        
+        @return Available port (>= minimalPort), or 0 if no port is available.
+        **/
         public static ushort Find(ushort minimalPort) {
             List<int> portArray = new List<int>();
             IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();

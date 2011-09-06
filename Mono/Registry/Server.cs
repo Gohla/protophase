@@ -6,16 +6,27 @@ using Protophase.Shared;
 using ZMQ;
 
 namespace Protophase.Registry {
+    /**
+    Registry server that keeps a registry of existing objects.
+    **/
     public class Server {
         private String _address;
         private Dictionary<String, ServiceInfo> _servicesByUID = new Dictionary<String, ServiceInfo>();
         private Dictionary<String, Dictionary<String, ServiceInfo>> _servicesByType =
             new Dictionary<String, Dictionary<String, ServiceInfo>>();
 
+        /**
+        Constructor.
+        
+        @param  address The address the registry should listen on in ZMQ socket style (e.g. tcp://*:5555)
+        **/
         public Server(String address) {
             _address = address;
         }
 
+        /**
+        Starts the main loop that receives and responds to messages. Does not return.
+        **/
         public void Start() {
             using(Context context = new Context(1)) {
                 using(Socket socket = context.Socket(SocketType.REP)) {
@@ -68,6 +79,13 @@ namespace Protophase.Registry {
             }
         }
 
+        /**
+        Register a service.
+        
+        @param  serviceInfo Information describing the service to register
+        
+        @return True if service is successfully registered, false if a service with given UID already exists.
+        **/
         private bool Register(ServiceInfo serviceInfo) {
             if(_servicesByUID.ContainsKey(serviceInfo.UID)) return false;
 
@@ -87,6 +105,13 @@ namespace Protophase.Registry {
             return true;
         }
 
+        /**
+        Unregisters a service
+        
+        @param  uid The UID of the service to unregister.
+        
+        @return True if service is successfully unregistered, false if service with given UID does not exists.
+        **/
         private bool Unregister(String uid) {
             ServiceInfo serviceInfo;
             if(_servicesByUID.TryGetValue(uid, out serviceInfo)) {
@@ -105,6 +130,13 @@ namespace Protophase.Registry {
             return false;
         }
 
+        /**
+        Searches for a service by UID.
+        
+        @param  uid The UID of the service to find.
+        
+        @return The service with given UID, or null if it was not found.
+        **/
         private ServiceInfo FindByUID(String uid) {
             ServiceInfo serviceInfo;
             if(_servicesByUID.TryGetValue(uid, out serviceInfo)) {

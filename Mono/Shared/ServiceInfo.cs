@@ -4,8 +4,22 @@ using System.Reflection;
 using System.Runtime.Serialization;
 
 namespace Protophase.Shared {
+    /**
+    Information about a service.
+    **/
     [Serializable]
     public class ServiceInfo {
+        /**
+        Constructor.
+        
+        @param  uid         The UID.
+        @param  type        The service type.
+        @param  version     The service version.
+        @param  address     The remote address.
+        @param  rpcPort     The RPC listening port.
+        @param  publishPort The publish/subscribe listening port.
+        @param  rpcMethods  The available RPC methods.
+        **/
         public ServiceInfo(String uid, String type, String version, String address, ushort rpcPort, ushort publishPort,
                            List<String> rpcMethods) {
             UID = uid;
@@ -25,6 +39,11 @@ namespace Protophase.Shared {
         public ushort PublishPort;
         public List<String> RPCMethods;
 
+        /**
+        Convert this object into a string representation.
+        
+        @return A string representation of this object.
+        **/
         public override String ToString() {
             return UID + ", " + Type + ", " + Version + ", " + Address + ", " + RPCPort + ", " + PublishPort +
                 ", RPC methods: [" + String.Join(", ", RPCMethods.ToArray()) + "]";
