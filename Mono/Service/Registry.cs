@@ -9,7 +9,7 @@ namespace Protophase.Service {
     /**
     Registry client that handles all communication with a registry server.
     **/
-    public class Registry {
+    public class Registry : IDisposable {
         private Context _context = new Context(1);
         private Dictionary<String, object> _objects = new Dictionary<String, object>();
 
@@ -58,6 +58,24 @@ namespace Protophase.Service {
         }
 
         /**
+        Finaliser.
+        **/
+        ~Registry() {
+            Dispose();
+        }
+
+        /**
+        Dispose of this object, unregisters all services and cleans up any resources it uses.
+        **/
+        public void Dispose() {
+            UnregisterAll();
+            if(_incomingRPCSocket != null) _incomingRPCSocket.Dispose();
+            _registrySocket.Dispose();
+
+            GC.SuppressFinalize(this);
+        }
+
+        /**
         Connects to the registry server.
         **/
         private void ConnectRegistry() {
@@ -102,6 +120,8 @@ namespace Protophase.Service {
         Receives RPC requests for all services.
         **/
         public void Receive() {
+            if(_incomingRPCSocket == null) return;
+
             byte[] message = _incomingRPCSocket.Recv(SendRecvOpt.NOBLOCK);
             if(message != null) {
                 MemoryStream stream = StreamUtil.CreateStream(message);
@@ -210,13 +230,28 @@ namespace Protophase.Service {
             _registrySocket.Send(stream.GetBuffer());
             MemoryStream receiveStream = StreamUtil.CreateStream(_registrySocket.Recv());
 
-            // Update own object dictionary.
             if(StreamUtil.ReadBool(receiveStream)) {
+                // Dispose of publish/subscribe socket.
+                Socket socket;
+                if(_publishSockets.TryGetValue(uid, out socket)) {
+                    socket.Dispose();
+                    _publishSockets.Remove(uid);
+                }
+
+                // Update own object dictionary.
                 _objects.Remove(uid);
                 return true;
             }
 
             return false;
+        }
+
+        /**
+        Unregisters all services.
+        **/
+        public void UnregisterAll() {
+            List<String> uids = new List<String>(_objects.Keys);
+            foreach(String uid in uids) Unregister(uid);
         }
 
         /**

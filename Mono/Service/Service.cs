@@ -14,7 +14,7 @@ namespace Protophase.Service {
     /**
     Generic remote service, used to receive published messages and send RPC requests to remote services.
     **/
-    public class Service {
+    public class Service : IDisposable {
         private ServiceInfo _serviceInfo;
         private Context _context;
         private Socket _rpcSocket;
@@ -48,6 +48,14 @@ namespace Protophase.Service {
             _context = context;
 
             Connect();
+        }
+
+        /**
+        Dispose of this object, cleaning up any resources it uses.
+        **/
+        public void Dispose() {
+            _rpcSocket.Dispose();
+            _publishedSocket.Dispose();
         }
 
         /**

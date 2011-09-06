@@ -12,35 +12,29 @@ namespace TestServiceServer {
             Console.CancelKeyPress += CancelKeyPressHandler;
 
             // Create registry client for registry at address tcp://localhost:5555.
-            Registry registry = new Registry("tcp://localhost:5555");
+            using(Registry registry = new Registry("tcp://localhost:5555")) {
+                // Register our hello world responder object with the registry.
+                HelloWorldResponder responder = new HelloWorldResponder();
+                if(registry.Register("HelloWorldResponder", responder))
+                    Console.WriteLine("Registered HelloWorldResponder");
+                else {
+                    Console.WriteLine("Failed to register HelloWorldResponder");
+                    return;
+                }
 
-            // Register our hello world responer object with the registry.
-            HelloWorldResponder responder = new HelloWorldResponder();
-            if(registry.Register("HelloWorldResponder", responder))
-                Console.WriteLine("Registered HelloWorldResponder");
-            else {
-                Console.WriteLine("Failed to register HelloWorldResponder");
-                return;
+                // Program loop
+                while(!quit) {
+                    // Publish a String object.
+                    // TODO: Publishing should be moved to the service object.
+                    registry.Publish("HelloWorldResponder", "Hello world!");
+
+                    // Receive RPC calls
+                    // TODO: Optionally let the library take care of this.
+                    registry.Receive();
+
+                    Thread.Sleep(10);
+                }
             }
-
-            // Program loop
-            while(!quit) {
-                // Publish a String object.
-                // TODO: Publishing should be moved to the service object.
-                registry.Publish("HelloWorldResponder", "Hello world!");
-
-                // Receive RPC calls
-                // TODO: Optionally let the library take care of this.
-                registry.Receive();
-
-                Thread.Sleep(10);
-            }
-
-            // Unregister object
-            if(registry.Unregister("HelloWorldResponder"))
-                Console.WriteLine("Unregistered HelloWorldResponder");
-            else
-                Console.WriteLine("Failed to unregister HelloWorldResponder");
         }
 
         // Handler for console cancel key presses.
