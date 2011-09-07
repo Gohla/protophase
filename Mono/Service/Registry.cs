@@ -18,11 +18,10 @@ namespace Protophase.Service {
 
         private String _remoteAddress;
 
-        private ushort _incomingRPCPort;
-        private Socket _incomingRPCSocket;
-
+        private Dictionary<String, Socket> _rpcSockets = new Dictionary<String, Socket>();
         private Dictionary<String, Socket> _publishSockets = new Dictionary<String, Socket>();
-        private static ushort _nextPublishPort = 1338;
+
+        private static readonly ushort INITIALPORT = 1024;
 
         /**
         Simple constructor.
@@ -34,8 +33,6 @@ namespace Protophase.Service {
             _registryAddress = registryAddress;
             _remoteAddress = "localhost";
 
-            _incomingRPCPort = 1337;
-
             ConnectRegistry();
         }
 
@@ -45,14 +42,10 @@ namespace Protophase.Service {
         @param  registryAddress The (remote) address of the registry server in ZMQ socket style (e.g.
                                 tcp://localhost:5555)
         @param  remoteAddress   The remote address that is reported to the registry.
-        @param  bindRPCPort     The port that is used for listening to RPC requests.
-        @param  bindPublishPort The port that is used for listening to publish/subscribe requests.
         **/
-        public Registry(String registryAddress, String remoteAddress, ushort bindRPCPort, ushort bindPublishPort) {
+        public Registry(String registryAddress, String remoteAddress) {
             _registryAddress = registryAddress;
             _remoteAddress = remoteAddress;
-
-            _incomingRPCPort = bindRPCPort;
 
             ConnectRegistry();
         }
@@ -69,7 +62,6 @@ namespace Protophase.Service {
         **/
         public void Dispose() {
             UnregisterAll();
-            if(_incomingRPCSocket != null) _incomingRPCSocket.Dispose();
             _registrySocket.Dispose();
             _context.Dispose();
 
@@ -86,13 +78,23 @@ namespace Protophase.Service {
         }
 
         /**
-        Starts listening for RPC requests.
+        Starts listening for RPC requests for the service with given UID.
+        
+        @param  uid The UID of the service.
+        
+        @return The port that is used for listening, or 0 if already listening.
         **/
-        private void BindRPC() {
-            if(_incomingRPCSocket != null) return;
-            _incomingRPCPort = AvailablePort.Find(_incomingRPCPort);
-            _incomingRPCSocket = _context.Socket(SocketType.REP);
-            _incomingRPCSocket.Bind("tcp://*:" + _incomingRPCPort);
+        private ushort BindRPC(String uid) {
+            if(!_rpcSockets.ContainsKey(uid)) {
+                Socket socket = _context.Socket(SocketType.REP);
+                ushort port = AvailablePort.Find(INITIALPORT);
+                socket.Bind("tcp://*:" + port);
+
+                _rpcSockets.Add(uid, socket);
+                return port;
+            }
+
+            return 0;
         }
 
         /**
@@ -106,12 +108,11 @@ namespace Protophase.Service {
         private ushort BindPublish(String uid) {
             if(!_publishSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.PUB);
-                _nextPublishPort = AvailablePort.Find(_nextPublishPort);
-                socket.Bind("tcp://*:" + _nextPublishPort);
+                ushort port = AvailablePort.Find(INITIALPORT);
+                socket.Bind("tcp://*:" + port);
 
                 _publishSockets.Add(uid, socket);
-
-                return _nextPublishPort++;
+                return port;
             }
 
             return 0;
@@ -121,38 +122,42 @@ namespace Protophase.Service {
         Receives RPC requests for all services.
         **/
         public void Receive() {
-            if(_incomingRPCSocket == null) return;
+            foreach(KeyValuePair<String,Socket> pair in _rpcSockets) {
+                Socket socket = pair.Value;
+                byte[] message = socket.Recv(SendRecvOpt.NOBLOCK);
+                while(message != null) {
+                    String uid = pair.Key;
+                    MemoryStream stream = StreamUtil.CreateStream(message);
 
-            byte[] message = _incomingRPCSocket.Recv(SendRecvOpt.NOBLOCK);
-            if(message != null) {
-                MemoryStream stream = StreamUtil.CreateStream(message);
+                    try {
+                        // Read UID, method name and parameters.
+                        String name = StreamUtil.Read<String>(stream);
+                        object[] pars = StreamUtil.Read<object[]>(stream);
 
-                try {
-                    // Read UID, method name and parameters.
-                    String uid = StreamUtil.Read<String>(stream);
-                    String name = StreamUtil.Read<String>(stream);
-                    object[] pars = StreamUtil.Read<object[]>(stream);
-    
-                    // Call method on object.
-                    object obj;
-                    object ret = null;
-                    if(_objects.TryGetValue(uid, out obj)) {
-                        // TODO: Handle incorrect method name.
-                        Type type = obj.GetType();
-                        ret = type.GetMethod(name).Invoke(obj, pars);
-                    } else {
-                        // TODO: Handle incorrect UID
+                        // Call method on object.
+                        object obj;
+                        object ret = null;
+                        if(_objects.TryGetValue(uid, out obj)) {
+                            // TODO: Handle incorrect method name.
+                            Type type = obj.GetType();
+                            ret = type.GetMethod(name).Invoke(obj, pars);
+                        } else {
+                            // TODO: Handle incorrect UID
+                        }
+
+                        // Send return value (or null if no value was returned)
+                        MemoryStream sendStream = new MemoryStream();
+                        StreamUtil.WriteWithNullCheck(sendStream, ret);
+                        socket.Send(sendStream.GetBuffer());
+                    } catch(System.Exception e) {
+                        Console.WriteLine("RPC failed:" + e.Message + "\n" + e.StackTrace);
+
+                        // Send back empty reply so that the client doesn't time out.
+                        socket.Send();
                     }
-    
-                    // Send return value (or null if no value was returned)
-                    MemoryStream sendStream = new MemoryStream();
-                    StreamUtil.WriteWithNullCheck(sendStream, ret);
-                    _incomingRPCSocket.Send(sendStream.GetBuffer());
-                } catch(System.Exception e) {
-                    Console.WriteLine("RPC failed:" + e.Message + "\n" + e.StackTrace);
 
-                    // Send back empty reply so that the client doesn't time out.
-                    _incomingRPCSocket.Send();
+                    // Try to get more messages.
+                    message = socket.Recv(SendRecvOpt.NOBLOCK);
                 }
             }
         }
@@ -170,7 +175,7 @@ namespace Protophase.Service {
             Type type = typeof(T);
 
             // Bind RPC and publish sockets.
-            BindRPC();
+            ushort rpcPort = BindRPC(uid);
             ushort publishPort = BindPublish(uid);
 
             // Get service type and version.
@@ -198,8 +203,8 @@ namespace Protophase.Service {
                 }
             }
 
-            ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, _remoteAddress,
-                                                      _incomingRPCPort, publishPort, rpcMethods);
+            ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, _remoteAddress, rpcPort, 
+                publishPort, rpcMethods);
 
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
@@ -241,8 +246,14 @@ namespace Protophase.Service {
             MemoryStream receiveStream = StreamUtil.CreateStream(_registrySocket.Recv());
 
             if(StreamUtil.ReadBool(receiveStream)) {
-                // Dispose of publish/subscribe socket.
+                // Dispose of RPC socket.
                 Socket socket;
+                if(_rpcSockets.TryGetValue(uid, out socket)) {
+                    socket.Dispose();
+                    _rpcSockets.Remove(uid);
+                }
+
+                // Dispose of publish/subscribe socket.              
                 if(_publishSockets.TryGetValue(uid, out socket)) {
                     socket.Dispose();
                     _publishSockets.Remove(uid);
@@ -272,7 +283,7 @@ namespace Protophase.Service {
         
         @param  uid The UID of the service to find.
         
-        @return The service with given UID, or null if it was not found.
+        @return The service info with given UID, or null if it was not found.
         **/
         public ServiceInfo FindByUID(String uid) {
             // Serialize to binary
@@ -290,17 +301,55 @@ namespace Protophase.Service {
         }
 
         /**
-        Gets a remote service object by UID.
+        Searches for services by type.
+        
+        @param  type The type of the services to find.
+        
+        @return The services info with given type, or null if no services were found.
+        **/
+        public ServiceInfo[] FindByType(String type) {
+            // Serialize to binary
+            MemoryStream stream = new MemoryStream();
+            // Write message type
+            stream.WriteByte((byte)RegistryMessageType.FindByType);
+            // Write UID
+            StreamUtil.Write<String>(stream, type);
+
+            // Send to registry and await results.
+            _registrySocket.Send(stream.GetBuffer());
+            byte[] message = _registrySocket.Recv();
+            MemoryStream receiveStream = new MemoryStream(message);
+            return StreamUtil.ReadWithNullCheck<ServiceInfo[]>(receiveStream);
+        }
+
+        /**
+        Gets a remote service object by UID. This connects to only one service, the service described by the given
+        UID.
         
         @param  uid The UID of the service to get.
         
         @return The remote service object with given UID, or null if it was not found.
         **/
-        public Service GetService(String uid) {
+        public Service GetServiceByUID(String uid) {
             ServiceInfo serviceInfo = FindByUID(uid);
             if(serviceInfo == null) return null;
 
             return new Service(serviceInfo, _context);
+        }
+
+        /**
+        Gets a remote service object by type. This connects to all services with given type and automatically load
+        balances RPC calls and receives published messages from all services.
+        
+        @param  type The type of the services to find.
+        
+        @return The remote service object with given type, or null if no services were found.
+        **/
+        public Service GetServiceByType(String type) {
+            ServiceInfo[] servicesInfo = FindByType(type);
+            if(servicesInfo == null) return null;
+
+            return new Service(servicesInfo, _context);
         }
 
         /**

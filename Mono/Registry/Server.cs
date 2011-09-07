@@ -37,10 +37,10 @@ namespace Protophase.Registry {
                         MemoryStream stream = StreamUtil.CreateStream(socket.Recv());
 
                         // Read message type
-                        RegistryMessageType type = (RegistryMessageType)stream.ReadByte();
+                        RegistryMessageType messageType = (RegistryMessageType)stream.ReadByte();
 
                         // Execute command
-                        switch(type) {
+                        switch(messageType) {
                             case RegistryMessageType.RegisterService: {
                                 ServiceInfo serviceInfo = StreamUtil.Read<ServiceInfo>(stream);
 
@@ -64,7 +64,17 @@ namespace Protophase.Registry {
                                 ServiceInfo serviceInfo = FindByUID(uid);
 
                                 MemoryStream sendStream = new MemoryStream();
-                                StreamUtil.WriteWithNullCheck<ServiceInfo>(sendStream, serviceInfo);
+                                StreamUtil.WriteWithNullCheck(sendStream, serviceInfo);
+                                socket.Send(sendStream.GetBuffer());
+
+                                break;
+                            }
+                            case RegistryMessageType.FindByType: {
+                                String type = StreamUtil.Read<String>(stream);
+                                ServiceInfo[] services = FindByType(type);
+
+                                MemoryStream sendStream = new MemoryStream();
+                                StreamUtil.WriteWithNullCheck(sendStream, services);
                                 socket.Send(sendStream.GetBuffer());
 
                                 break;
@@ -135,12 +145,30 @@ namespace Protophase.Registry {
         
         @param  uid The UID of the service to find.
         
-        @return The service with given UID, or null if it was not found.
+        @return The service info with given UID, or null if it was not found.
         **/
         private ServiceInfo FindByUID(String uid) {
             ServiceInfo serviceInfo;
             if(_servicesByUID.TryGetValue(uid, out serviceInfo)) {
                 return serviceInfo;
+            }
+
+            return null;
+        }
+
+        /**
+        Searches for services by type.
+        
+        @param  type The type of the services to find.
+        
+        @return The services info with given type, or null if no services were found.
+        **/
+        private ServiceInfo[] FindByType(String type) {
+            Dictionary<String, ServiceInfo> services;
+            if(_servicesByType.TryGetValue(type, out services)) {
+                ServiceInfo[] servicesArray = new ServiceInfo[services.Count];
+                services.Values.CopyTo(servicesArray, 0);
+                return servicesArray;
             }
 
             return null;

@@ -1,5 +1,8 @@
 using System;
 using System.IO;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using Protophase.Shared;
 using ZMQ;
 
@@ -8,7 +11,7 @@ namespace Protophase.Service {
     Generic remote service, used to receive published messages and send RPC requests to remote services.
     **/
     public class Service : IDisposable {
-        private ServiceInfo _serviceInfo;
+        private List<ServiceInfo> _servicesInfo = new List<ServiceInfo>();
         private Context _context;
         private Socket _rpcSocket;
         private Socket _publishedSocket;
@@ -33,14 +36,29 @@ namespace Protophase.Service {
         /**
         Constructor.
         
-        @param  serviceInfo Information describing the remote service.
+        @param  serviceInfo Information describing a remote service.
         @param  context     The ZMQ context.
         **/
         public Service(ServiceInfo serviceInfo, Context context) {
-            _serviceInfo = serviceInfo;
+            _servicesInfo.Add(serviceInfo);
             _context = context;
 
-            Connect();
+            Initialize();
+            ConnectAll();
+        }
+
+        /**
+        Constructor.
+        
+        @param  servicesInfo Information describing a remote services.
+        @param  context      The ZMQ context.
+        **/
+        public Service(ServiceInfo[] servicesInfo, Context context) {
+            _servicesInfo.InsertRange(0, servicesInfo);
+            _context = context;
+
+            Initialize();
+            ConnectAll();
         }
 
         /**
@@ -52,13 +70,28 @@ namespace Protophase.Service {
         }
 
         /**
-        Connects to the RPC and publish/subscribe sockets of the remote service.
+        Initializes sockets.
         **/
-        private void Connect() {
+        private void Initialize() {
             _rpcSocket = _context.Socket(SocketType.REQ);
-            _rpcSocket.Connect("tcp://" + _serviceInfo.Address + ":" + _serviceInfo.RPCPort);
             _publishedSocket = _context.Socket(SocketType.SUB);
-            _publishedSocket.Connect("tcp://" + _serviceInfo.Address + ":" + _serviceInfo.PublishPort);
+        }
+
+        /**
+        Connects to the RPC and publish/subscribe sockets of the given remote service.
+        
+        @param  serviceInfo The service info.
+        **/
+        private void Connect(ServiceInfo serviceInfo) {
+            _rpcSocket.Connect("tcp://" + serviceInfo.Address + ":" + serviceInfo.RPCPort);
+            _publishedSocket.Connect("tcp://" + serviceInfo.Address + ":" + serviceInfo.PublishPort);
+        }
+
+        /**
+        Connects to the RPC and publish/subscribe sockets of all services.
+        **/
+        private void ConnectAll() {
+            foreach(ServiceInfo serviceInfo in _servicesInfo) Connect(serviceInfo);
         }
 
         /**
@@ -82,11 +115,14 @@ namespace Protophase.Service {
         **/
         public void Receive() {
             byte[] message = _publishedSocket.Recv(SendRecvOpt.NOBLOCK);
-            if(message != null) {
+            while(message != null) {
                 MemoryStream stream = StreamUtil.CreateStream(message);
 
                 object obj = StreamUtil.Read<object>(stream);
                 if(_published != null) _published(obj);
+
+                // Try to get more messages.
+                message = _publishedSocket.Recv(SendRecvOpt.NOBLOCK);
             }
         }
 
@@ -104,7 +140,6 @@ namespace Protophase.Service {
             MemoryStream stream = new MemoryStream();
             // Write UID method name
             // TODO: Validate method name
-            StreamUtil.Write(stream, _serviceInfo.UID);
             StreamUtil.Write(stream, name);
             StreamUtil.Write(stream, pars);
 
@@ -132,7 +167,7 @@ namespace Protophase.Service {
         @return A string representation of this object.
         **/
         public override String ToString() {
-            return _serviceInfo.ToString();
+            return "[" + String.Join(", ", _servicesInfo.Select(s => s.ToString()).ToArray()) + "]";
         }
     }
 }
