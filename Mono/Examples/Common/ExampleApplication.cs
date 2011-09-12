@@ -1,6 +1,5 @@
 using System;
 using Protophase.Service;
-using Protophase.Shared;
 
 namespace Protophase.Examples {
     /**

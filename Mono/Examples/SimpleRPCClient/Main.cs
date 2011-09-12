@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using Protophase.Service;
 using Protophase.Shared;
 using Protophase.Examples;
