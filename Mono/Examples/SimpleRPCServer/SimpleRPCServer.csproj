@@ -56,10 +56,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\clrzmq\clrzmq.csproj">
-      <Project>{FE6D6CDD-8A04-4A3A-A654-5C687AB724E3}</Project>
-      <Name>clrzmq</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\Service\Service.csproj">
       <Project>{3509E6B7-1F72-4FE8-B324-015437DD679A}</Project>
       <Name>Service</Name>
@@ -67,6 +63,10 @@
     <ProjectReference Include="..\..\Shared\Shared.csproj">
       <Project>{712E9B63-96F4-464C-8102-237D307C8EF6}</Project>
       <Name>Shared</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Common\Common.csproj">
+      <Project>{3F9BAC4A-3EFB-4533-B459-3A57C8C1F132}</Project>
+      <Name>Common</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

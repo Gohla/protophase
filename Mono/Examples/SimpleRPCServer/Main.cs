@@ -2,24 +2,20 @@
 using System.Threading;
 using Protophase.Service;
 using Protophase.Shared;
+using Protophase.Examples;
 
 namespace SimpleRPCServer {
-    static class MainClass {
-        private static Registry _registry;
-
-        private static void Main(string[] args) {
-            Console.CancelKeyPress += CancelKeyPressHandler;
-
-            using(_registry = new Registry("tcp://localhost:5555")) {
-                TestServer testServer = new TestServer();
-                _registry.Register("TestServer", testServer);
-                _registry.AutoUpdate();
+    class Application : ExampleApplication {
+        static void Main(string[] args) {
+            using(Application app = new Application()) {
+                app.Start();
             }
         }
 
-        private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs args) {
-            args.Cancel = true; // Cancel quitting, do our own quitting.
-            _registry.StopAutoUpdate();
+        protected override void Init() {
+            TestServer testServer = new TestServer();
+            _registry.Register("TestServer", testServer);
+            _registry.AutoUpdate();
         }
     }
 
