@@ -3,7 +3,7 @@
 /Mono/Registry/obj
 /Mono/Service/obj
 /Mono/Shared/obj
-/Mono/TestServiceClient/obj
-/Mono/TestServiceServer/obj
-/Mono/SimpleRPCClient/obj
-/Mono/SimpleRPCServer/obj
+/Mono/Examples/TestServiceClient/obj
+/Mono/Examples/TestServiceServer/obj
+/Mono/Examples/SimpleRPCClient/obj
+/Mono/Examples/SimpleRPCServer/obj
