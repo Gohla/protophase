@@ -4,14 +4,21 @@ using System.Collections.Generic;
 using System.Reflection;
 using Protophase.Shared;
 using ZMQ;
+using System.Threading;
 
 namespace Protophase.Service {
+    /**
+    Delegate for the idle event in Registry.
+    **/
+    public delegate void IdleEvent();
+
     /**
     Registry client that handles all communication with a registry server.
     **/
     public class Registry : IDisposable {
         private Context _context = new Context(1);
         private Dictionary<String, object> _objects = new Dictionary<String, object>();
+        private bool _stopAutoUpdate = false;
 
         private String _registryAddress;
         private Socket _registrySocket;
@@ -22,6 +29,11 @@ namespace Protophase.Service {
         private Dictionary<String, Socket> _publishSockets = new Dictionary<String, Socket>();
 
         private static readonly ushort INITIALPORT = 1024;
+
+        /**
+        Event that is called after each update loop when in auto update mode.
+        **/
+        public event IdleEvent Idle;
 
         /**
         Simple constructor.
@@ -62,6 +74,11 @@ namespace Protophase.Service {
         **/
         public void Dispose() {
             UnregisterAll();
+
+            // Dispose all service objects before disposing of the context.
+            for(int i = Service._serviceObjects.Count - 1; i >= 0; --i)
+                Service._serviceObjects[i].Dispose();
+
             _registrySocket.Dispose();
             _context.Dispose();
 
@@ -160,6 +177,36 @@ namespace Protophase.Service {
                     message = socket.Recv(SendRecvOpt.NOBLOCK);
                 }
             }
+        }
+
+        /**
+        Receives RPC requests and published messages for all services. This calls Receive on the Registry and Receive
+        on every Service object.
+        **/
+        public void Update() {
+            Receive();
+            foreach(Service service in Service._serviceObjects) service.Receive();
+        }
+
+        /**
+        Enters an infinite loop that automatically calls Update. After each update the Idle event is triggered. Use
+        StopAutoUpdate to break out of this loop.
+        **/
+        public void AutoUpdate() {
+            while(!_stopAutoUpdate) {
+                Update();
+                if(Idle != null) Idle();
+                Thread.Sleep(0);
+            }
+
+            _stopAutoUpdate = false;
+        }
+
+        /**
+        Stop the auto update loop.
+        **/
+        public void StopAutoUpdate() {
+            _stopAutoUpdate = true;
         }
 
         /**

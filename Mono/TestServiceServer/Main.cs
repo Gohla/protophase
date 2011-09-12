@@ -5,7 +5,7 @@ using Protophase.Shared;
 
 namespace TestServiceServer {
     static class MainClass {
-        private static bool quit = false;
+        private static bool _quit = false;
 
         public static void Main(string[] args) {
             // Get console quit key press events.
@@ -38,7 +38,7 @@ namespace TestServiceServer {
                 }
 
                 // Program loop
-                while(!quit) {
+                while(!_quit) {
                     // Emit an event in the service.
                     responder1.SomethingHappened();
                     responder3.SomethingHappened();
@@ -55,7 +55,7 @@ namespace TestServiceServer {
         // Handler for console cancel key presses.
         private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs args) {
             args.Cancel = true; // Cancel quitting, do our own quitting.
-            quit = true;
+            _quit = true;
         }
     }
 

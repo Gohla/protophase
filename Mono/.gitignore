@@ -3,3 +3,8 @@
 *.suo
 *.user
 *.pdb
+*.pidb
+*.exe
+*.pdb
+*.dll
+*.manifest

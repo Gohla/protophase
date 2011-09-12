@@ -5,7 +5,7 @@ using Protophase.Shared;
 
 namespace TestServiceClient {
     static class MainClass {
-        private static bool quit = false;
+        private static bool _quit = false;
 
         public static void Main(string[] args) {
             try {
@@ -32,7 +32,7 @@ namespace TestServiceClient {
                     helloWorldAll.Published += (object obj) => Console.WriteLine("HelloWorldResponders published: " + obj);
 
                     // Program loop
-                    while(!quit) {
+                    while(!_quit) {
                         // Call receive on the objects to receive published messages.
                         // TODO: Optionally let the library take care of this.
                         helloWorld1.Receive();
@@ -60,7 +60,7 @@ namespace TestServiceClient {
         // Handler for console cancel key presses.
         private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs args) {
             args.Cancel = true; // Cancel quitting, do our own quitting.
-            quit = true;
+            _quit = true;
         }
     }
 }

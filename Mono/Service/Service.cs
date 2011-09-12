@@ -19,6 +19,8 @@ namespace Protophase.Service {
         private uint _publishedCounter = 0;
         private event PublishedEvent _published;
 
+        static internal List<Service> _serviceObjects = new List<Service>();
+
         /**
         Event that is called when a message is published for this service.
         **/
@@ -45,6 +47,8 @@ namespace Protophase.Service {
 
             Initialize();
             ConnectAll();
+
+            _serviceObjects.Add(this);
         }
 
         /**
@@ -59,14 +63,27 @@ namespace Protophase.Service {
 
             Initialize();
             ConnectAll();
+
+            _serviceObjects.Add(this);
+        }
+
+        /**
+        Finaliser.
+        **/
+        ~Service() {
+            Dispose();
         }
 
         /**
         Dispose of this object, cleaning up any resources it uses.
         **/
         public void Dispose() {
+            _serviceObjects.Remove(this);
+
             _rpcSocket.Dispose();
             _publishedSocket.Dispose();
+
+            GC.SuppressFinalize(this);
         }
 
         /**

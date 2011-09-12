@@ -5,3 +5,5 @@
 /Mono/Shared/obj
 /Mono/TestServiceClient/obj
 /Mono/TestServiceServer/obj
+/Mono/SimpleRPCClient/obj
+/Mono/SimpleRPCServer/obj
