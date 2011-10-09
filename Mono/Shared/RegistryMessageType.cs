@@ -6,6 +6,7 @@ namespace Protophase.Shared {
         RegisterService,
         UnregisterService,
         FindByUID,
-        FindByType
+        FindByType,
+        Pulse
     }
 }

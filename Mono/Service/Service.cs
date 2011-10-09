@@ -1,16 +1,24 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Protophase.Shared;
 using ZMQ;
+using Exception = System.Exception;
+
 
 namespace Protophase.Service {
+
+    
     /**
     Generic remote service, used to receive published messages and send RPC requests to remote services.
     **/
-    public class Service : IDisposable {
+
+    public class Service : IDisposable
+    {
         private List<ServiceInfo> _servicesInfo = new List<ServiceInfo>();
         private String _serviceType;
         private Context _context;
@@ -138,7 +146,7 @@ namespace Protophase.Service {
         /**
         Receives all published messages.
         **/
-        public void Receive() {
+        internal void Receive() {
             byte[] message = _publishedSocket.Recv(SendRecvOpt.NOBLOCK);
             while(message != null) {
                 MemoryStream stream = StreamUtil.CreateStream(message);

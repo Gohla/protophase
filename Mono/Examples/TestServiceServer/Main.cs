@@ -45,7 +45,7 @@ namespace TestServiceServer {
 
                     // Receive RPC calls
                     // TODO: Optionally let the library take care of this.
-                    registry.Receive();
+                    registry.Update();
 
                     Thread.Sleep(100);
                 }

@@ -16,7 +16,8 @@ namespace TestServiceClient {
                 Thread.Sleep(1000);
 
                 // Create registry client for registry at address tcp://localhost:5555.
-                using(Registry registry = new Registry("tcp://localhost:5555")) {
+                using(Registry registry = new Registry("tcp://localhost:5555")) 
+                {
                     // Get HelloWorldResponder service, loop until it exists.
                     Service helloWorld1 = null;
                     while(helloWorld1 == null) helloWorld1 = registry.GetServiceByUID("HelloWorldResponder1");
@@ -35,15 +36,17 @@ namespace TestServiceClient {
                     while(!_quit) {
                         // Call receive on the objects to receive published messages.
                         // TODO: Optionally let the library take care of this.
-                        helloWorld1.Receive();
-                        helloWorldAll.Receive();
+                        //helloWorld1.Receive();
+                        //helloWorldAll.Receive();
+                        registry.Update();
+                        //Console.WriteLine(ApplicationInstance.Guid);
 
                         // RPC HelloWorld function with no parameters and print the result.
-                        Console.WriteLine("RPC call HelloWorld on HelloWorldResponder1: " + helloWorld1.Call<String>("HelloWorld"));
-                        Console.WriteLine("RPC call HelloWorld on HelloWorldResponders: " + helloWorldAll.Call<String>("HelloWorld"));
+                        //Console.WriteLine("RPC call HelloWorld on HelloWorldResponder1: " + helloWorld1.Call<String>("HelloWorld"));
+                        //Console.WriteLine("RPC call HelloWorld on HelloWorldResponders: " + helloWorldAll.Call<String>("HelloWorld"));
                         // RPC ReturnParam function with 3 params and print the result.
-                        Console.WriteLine("RPC call ReturnParam on HelloWorldResponder1: " + helloWorld1.Call<String>("ReturnParam", 1, 1.0f, "one"));
-                        Console.WriteLine("RPC call ReturnParam on HelloWorldResponders: " + helloWorldAll.Call<String>("ReturnParam", 1, 1.0f, "one"));
+                        //Console.WriteLine("RPC call ReturnParam on HelloWorldResponder1: " + helloWorld1.Call<String>("ReturnParam", 1, 1.0f, "one"));
+                        //Console.WriteLine("RPC call ReturnParam on HelloWorldResponders: " + helloWorldAll.Call<String>("ReturnParam", 1, 1.0f, "one"));
 
                         Thread.Sleep(100);
                     }
@@ -54,6 +57,7 @@ namespace TestServiceClient {
                 }
             } catch(Exception e) {
                 Console.WriteLine(e.Message + "\n" + e.StackTrace);
+                Thread.Sleep(10000);
             }
         }
 

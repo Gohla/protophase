@@ -14,6 +14,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{712E9B63-96F4-464C-8102-237D307C8EF6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2. Examples", "2. Examples", "{1D387F67-4BFD-4606-A0A4-081E55009B1E}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\SimpleRPCClient\Main.cs = Examples\SimpleRPCClient\Main.cs
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Testing", "Testing", "{CF1500D9-045C-4AB9-9AEA-3D4C4FA3105A}"
 EndProject

@@ -6,16 +6,20 @@ using Protophase.Shared;
 using ZMQ;
 using System.Threading;
 
-namespace Protophase.Service {
+namespace Protophase.Service
+{
     /**
     Delegate for the idle event in Registry.
     **/
+
     public delegate void IdleEvent();
 
     /**
     Registry client that handles all communication with a registry server.
     **/
-    public class Registry : IDisposable {
+
+    public class Registry : IDisposable
+    {
         private Context _context = new Context(1);
         private Dictionary<String, object> _objects = new Dictionary<String, object>();
         private bool _stopAutoUpdate = false;
@@ -28,12 +32,15 @@ namespace Protophase.Service {
         private Dictionary<String, Socket> _rpcSockets = new Dictionary<String, Socket>();
         private Dictionary<String, Socket> _publishSockets = new Dictionary<String, Socket>();
 
+        
         private static readonly ushort INITIALPORT = 1024;
+
 
         /**
         Event that is called after each update loop when in auto update mode.
         **/
         public event IdleEvent Idle;
+
 
         /**
         Simple constructor.
@@ -41,7 +48,9 @@ namespace Protophase.Service {
         @param  registryAddress The (remote) address of the registry server in ZMQ socket style (e.g.
                                 tcp://localhost:5555)
         **/
-        public Registry(String registryAddress) {
+
+        public Registry(String registryAddress)
+        {
             _registryAddress = registryAddress;
             _remoteAddress = "localhost";
 
@@ -55,7 +64,9 @@ namespace Protophase.Service {
                                 tcp://localhost:5555)
         @param  remoteAddress   The remote address that is reported to the registry.
         **/
-        public Registry(String registryAddress, String remoteAddress) {
+
+        public Registry(String registryAddress, String remoteAddress)
+        {
             _registryAddress = registryAddress;
             _remoteAddress = remoteAddress;
 
@@ -65,31 +76,34 @@ namespace Protophase.Service {
         /**
         Finaliser.
         **/
-        ~Registry() {
+
+        ~Registry()
+        {
             Dispose();
         }
 
         /**
         Dispose of this object, unregisters all services and cleans up any resources it uses.
         **/
-        public void Dispose() {
+
+        public void Dispose()
+        {
             UnregisterAll();
-
             // Dispose all service objects before disposing of the context.
-            for(int i = Service._serviceObjects.Count - 1; i >= 0; --i)
+            for (int i = Service._serviceObjects.Count - 1; i >= 0; --i)
                 Service._serviceObjects[i].Dispose();
-
             _registrySocket.Dispose();
             _context.Dispose();
-
             GC.SuppressFinalize(this);
         }
 
         /**
         Connects to the registry server.
         **/
-        private void ConnectRegistry() {
-            if(_registrySocket != null) return;
+
+        private void ConnectRegistry()
+        {
+            if (_registrySocket != null) return;
             _registrySocket = _context.Socket(SocketType.REQ);
             _registrySocket.Connect(_registryAddress);
         }
@@ -101,8 +115,11 @@ namespace Protophase.Service {
         
         @return The port that is used for listening, or 0 if already listening.
         **/
-        private ushort BindRPC(String uid) {
-            if(!_rpcSockets.ContainsKey(uid)) {
+
+        private ushort BindRPC(String uid)
+        {
+            if (!_rpcSockets.ContainsKey(uid))
+            {
                 Socket socket = _context.Socket(SocketType.REP);
                 ushort port = AvailablePort.Find(INITIALPORT);
                 socket.Bind("tcp://*:" + port);
@@ -122,8 +139,11 @@ namespace Protophase.Service {
         
         @return The port that is used for listening, or 0 if already listening.
         **/
-        private ushort BindPublish(String uid) {
-            if(!_publishSockets.ContainsKey(uid)) {
+
+        private ushort BindPublish(String uid)
+        {
+            if (!_publishSockets.ContainsKey(uid))
+            {
                 Socket socket = _context.Socket(SocketType.PUB);
                 ushort port = AvailablePort.Find(INITIALPORT);
                 socket.Bind("tcp://*:" + port);
@@ -138,15 +158,20 @@ namespace Protophase.Service {
         /**
         Receives RPC requests for all services.
         **/
-        public void Receive() {
-            foreach(KeyValuePair<String,Socket> pair in _rpcSockets) {
+
+        private void Receive()
+        {
+            foreach (KeyValuePair<String, Socket> pair in _rpcSockets)
+            {
                 Socket socket = pair.Value;
                 byte[] message = socket.Recv(SendRecvOpt.NOBLOCK);
-                while(message != null) {
+                while (message != null)
+                {
                     String uid = pair.Key;
                     MemoryStream stream = StreamUtil.CreateStream(message);
 
-                    try {
+                    try
+                    {
                         // Read UID, method name and parameters.
                         String name = StreamUtil.Read<String>(stream);
                         object[] pars = StreamUtil.Read<object[]>(stream);
@@ -154,11 +179,14 @@ namespace Protophase.Service {
                         // Call method on object.
                         object obj;
                         object ret = null;
-                        if(_objects.TryGetValue(uid, out obj)) {
+                        if (_objects.TryGetValue(uid, out obj))
+                        {
                             // TODO: Handle incorrect method name.
                             Type type = obj.GetType();
                             ret = type.GetMethod(name).Invoke(obj, pars);
-                        } else {
+                        }
+                        else
+                        {
                             // TODO: Handle incorrect UID
                         }
 
@@ -166,7 +194,9 @@ namespace Protophase.Service {
                         MemoryStream sendStream = new MemoryStream();
                         StreamUtil.WriteWithNullCheck(sendStream, ret);
                         socket.Send(sendStream.GetBuffer());
-                    } catch(System.Exception e) {
+                    }
+                    catch (System.Exception e)
+                    {
                         Console.WriteLine("RPC failed:" + e.Message + "\n" + e.StackTrace);
 
                         // Send back empty reply so that the client doesn't time out.
@@ -183,19 +213,25 @@ namespace Protophase.Service {
         Receives RPC requests and published messages for all services. This calls Receive on the Registry and Receive
         on every Service object.
         **/
-        public void Update() {
+
+        public void Update()
+        {
             Receive();
-            foreach(Service service in Service._serviceObjects) service.Receive();
+            foreach (Service service in Service._serviceObjects) service.Receive();
+            SendPulse();
         }
 
         /**
         Enters an infinite loop that automatically calls Update. After each update the Idle event is triggered. Use
         StopAutoUpdate to break out of this loop.
         **/
-        public void AutoUpdate() {
-            while(!_stopAutoUpdate) {
+
+        public void AutoUpdate()
+        {
+            while (!_stopAutoUpdate)
+            {
                 Update();
-                if(Idle != null) Idle();
+                if (Idle != null) Idle();
                 Thread.Sleep(0);
             }
 
@@ -205,8 +241,29 @@ namespace Protophase.Service {
         /**
         Stop the auto update loop.
         **/
-        public void StopAutoUpdate() {
+
+        public void StopAutoUpdate()
+        {
             _stopAutoUpdate = true;
+        }
+
+
+        /**
+        Sends a Pulse message
+        **/
+
+        private void SendPulse()
+        {
+            // Serialize to binary
+            MemoryStream stream = new MemoryStream();
+            // Write message type
+            stream.WriteByte((byte)RegistryMessageType.Pulse);
+            // Write service info
+            StreamUtil.Write<ApplicationInstance>(stream, ApplicationInstance._appInstance);
+            // Send to registry and await results.
+            _registrySocket.Send(stream.GetBuffer());
+            _registrySocket.Recv();
+            Console.WriteLine("Sent Pulse " + ApplicationInstance._appInstance.Guid);
         }
 
         /**
@@ -218,45 +275,51 @@ namespace Protophase.Service {
         
         @return True if service is successfully registered, false if a service with given UID already exists.
         **/
-        public bool Register<T>(String uid, T obj) {
-            Type type = typeof(T);
+
+        public bool Register<T>(String uid, T obj)
+        {
+            Type type = typeof (T);
 
             // Bind RPC and publish sockets.
             ushort rpcPort = BindRPC(uid);
             ushort publishPort = BindPublish(uid);
 
             // Get service type and version.
-            ServiceType[] serviceTypes = type.GetCustomAttributes(typeof(ServiceType), true) as ServiceType[];
+            ServiceType[] serviceTypes = type.GetCustomAttributes(typeof (ServiceType), true) as ServiceType[];
             ServiceVersion[] serviceVersions =
-                type.GetCustomAttributes(typeof(ServiceVersion), true) as ServiceVersion[];
+                type.GetCustomAttributes(typeof (ServiceVersion), true) as ServiceVersion[];
             String serviceType = serviceTypes.Length == 1 ? serviceTypes[0].Type : "Generic";
             String serviceVersion = serviceVersions.Length == 1 ? serviceVersions[0].Version : "0.1";
 
             // Find all methods that can be RPC called.
             MethodInfo[] methods = type.GetMethods();
             List<String> rpcMethods = new List<String>();
-            foreach(MethodInfo method in methods) {
-                if(method.GetCustomAttributes(typeof(RPC), true).Length > 0) {
+            foreach (MethodInfo method in methods)
+            {
+                if (method.GetCustomAttributes(typeof (RPC), true).Length > 0)
+                {
                     rpcMethods.Add(method.Name);
                 }
             }
 
             // Subscribe to publisher events.
             EventInfo[] events = type.GetEvents();
-            foreach(EventInfo evt in events) {
-                if(evt.GetCustomAttributes(typeof(Publisher), true).Length > 0) {
+            foreach (EventInfo evt in events)
+            {
+                if (evt.GetCustomAttributes(typeof (Publisher), true).Length > 0)
+                {
                     PublishedEvent pubDelegate = (object pubObj) => Publish(uid, pubObj);
                     evt.AddEventHandler(obj, pubDelegate);
                 }
             }
 
-            ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, _remoteAddress, rpcPort, 
-                publishPort, rpcMethods);
+            ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, _remoteAddress, rpcPort,
+                                                      publishPort, rpcMethods);
 
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
             // Write message type
-            stream.WriteByte((byte)RegistryMessageType.RegisterService);
+            stream.WriteByte((byte) RegistryMessageType.RegisterService);
             // Write service info
             StreamUtil.Write<ServiceInfo>(stream, serviceInfo);
 
@@ -265,13 +328,15 @@ namespace Protophase.Service {
             MemoryStream receiveStream = StreamUtil.CreateStream(_registrySocket.Recv());
 
             // Update own object dictionary.
-            if(StreamUtil.ReadBool(receiveStream)) {
+            if (StreamUtil.ReadBool(receiveStream))
+            {
                 _objects.Add(uid, obj);
                 return true;
             }
 
             return false;
         }
+
 
         /**
         Unregisters service with given UID.
@@ -280,11 +345,13 @@ namespace Protophase.Service {
         
         @return True if service is successfully unregistered, false if service with given UID does not exists.
         **/
-        public bool Unregister(String uid) {
+
+        public bool Unregister(String uid)
+        {
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
             // Write message type
-            stream.WriteByte((byte)RegistryMessageType.UnregisterService);
+            stream.WriteByte((byte) RegistryMessageType.UnregisterService);
             // Write UID
             StreamUtil.Write<String>(stream, uid);
 
@@ -292,16 +359,19 @@ namespace Protophase.Service {
             _registrySocket.Send(stream.GetBuffer());
             MemoryStream receiveStream = StreamUtil.CreateStream(_registrySocket.Recv());
 
-            if(StreamUtil.ReadBool(receiveStream)) {
+            if (StreamUtil.ReadBool(receiveStream))
+            {
                 // Dispose of RPC socket.
                 Socket socket;
-                if(_rpcSockets.TryGetValue(uid, out socket)) {
+                if (_rpcSockets.TryGetValue(uid, out socket))
+                {
                     socket.Dispose();
                     _rpcSockets.Remove(uid);
                 }
 
                 // Dispose of publish/subscribe socket.              
-                if(_publishSockets.TryGetValue(uid, out socket)) {
+                if (_publishSockets.TryGetValue(uid, out socket))
+                {
                     socket.Dispose();
                     _publishSockets.Remove(uid);
                 }
@@ -320,9 +390,11 @@ namespace Protophase.Service {
         /**
         Unregisters all services.
         **/
-        public void UnregisterAll() {
+
+        public void UnregisterAll()
+        {
             List<String> uids = new List<String>(_objects.Keys);
-            foreach(String uid in uids) Unregister(uid);
+            foreach (String uid in uids) Unregister(uid);
         }
 
         /**
@@ -332,11 +404,13 @@ namespace Protophase.Service {
         
         @return The service info with given UID, or null if it was not found.
         **/
-        public ServiceInfo FindByUID(String uid) {
+
+        public ServiceInfo FindByUID(String uid)
+        {
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
             // Write message type
-            stream.WriteByte((byte)RegistryMessageType.FindByUID);
+            stream.WriteByte((byte) RegistryMessageType.FindByUID);
             // Write UID
             StreamUtil.Write<String>(stream, uid);
 
@@ -354,11 +428,13 @@ namespace Protophase.Service {
         
         @return The services info with given type, or null if no services were found.
         **/
-        public ServiceInfo[] FindByType(String type) {
+
+        public ServiceInfo[] FindByType(String type)
+        {
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
             // Write message type
-            stream.WriteByte((byte)RegistryMessageType.FindByType);
+            stream.WriteByte((byte) RegistryMessageType.FindByType);
             // Write UID
             StreamUtil.Write<String>(stream, type);
 
@@ -377,9 +453,11 @@ namespace Protophase.Service {
         
         @return The remote service object with given UID, or null if it was not found.
         **/
-        public Service GetServiceByUID(String uid) {
+
+        public Service GetServiceByUID(String uid)
+        {
             ServiceInfo serviceInfo = FindByUID(uid);
-            if(serviceInfo == null) return null;
+            if (serviceInfo == null) return null;
 
             return new Service(serviceInfo, _context);
         }
@@ -392,9 +470,11 @@ namespace Protophase.Service {
         
         @return The remote service object with given type, or null if no services were found.
         **/
-        public Service GetServiceByType(String type) {
+
+        public Service GetServiceByType(String type)
+        {
             ServiceInfo[] servicesInfo = FindByType(type);
-            if(servicesInfo == null) return null;
+            if (servicesInfo == null) return null;
 
             return new Service(servicesInfo, _context);
         }
@@ -405,9 +485,12 @@ namespace Protophase.Service {
         @param  uid The UID of the service to publish for.
         @param  obj The object to send as a message.
         **/
-        public void Publish(String uid, object obj) {
+
+        public void Publish(String uid, object obj)
+        {
             Socket socket;
-            if(_publishSockets.TryGetValue(uid, out socket)) {
+            if (_publishSockets.TryGetValue(uid, out socket))
+            {
                 // Serialize to binary
                 MemoryStream stream = new MemoryStream();
                 // Write object
