@@ -12,6 +12,7 @@ namespace Protophase.Service {
     **/
     public class Service : IDisposable {
         private List<ServiceInfo> _servicesInfo = new List<ServiceInfo>();
+        private String _serviceType;
         private Context _context;
         private Socket _rpcSocket;
         private Socket _publishedSocket;
@@ -20,6 +21,8 @@ namespace Protophase.Service {
         private event PublishedEvent _published;
 
         static internal List<Service> _serviceObjects = new List<Service>();
+        static private MultiValueDictionary<String, Service> _serviceObjectsByType = 
+            new MultiValueDictionary<String, Service>();
 
         /**
         Event that is called when a message is published for this service.
@@ -43,12 +46,14 @@ namespace Protophase.Service {
         **/
         public Service(ServiceInfo serviceInfo, Context context) {
             _servicesInfo.Add(serviceInfo);
+            _serviceType = serviceInfo.Type;
             _context = context;
 
             Initialize();
             ConnectAll();
 
             _serviceObjects.Add(this);
+            _serviceObjectsByType.Add(_serviceType, this);
         }
 
         /**
@@ -59,12 +64,14 @@ namespace Protophase.Service {
         **/
         public Service(ServiceInfo[] servicesInfo, Context context) {
             _servicesInfo.InsertRange(0, servicesInfo);
+            _serviceType = servicesInfo[0].Type; // TODO: Check if all services have the same type?
             _context = context;
 
             Initialize();
             ConnectAll();
 
             _serviceObjects.Add(this);
+            _serviceObjectsByType.Add(_serviceType, this);
         }
 
         /**
@@ -79,6 +86,7 @@ namespace Protophase.Service {
         **/
         public void Dispose() {
             _serviceObjects.Remove(this);
+            _serviceObjectsByType.Remove(_serviceType, this);
 
             _rpcSocket.Dispose();
             _publishedSocket.Dispose();

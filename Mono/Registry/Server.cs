@@ -7,86 +7,165 @@ using ZMQ;
 
 namespace Protophase.Registry {
     /**
+    Delegate for the idle event in Server.
+    **/
+    public delegate void IdleEvent();
+
+    /**
     Registry server that keeps a registry of existing objects.
     **/
-    public class Server {
-        private String _address;
+    public class Server : IDisposable {
+        private Context _context = new Context(1);
+        private bool _stopAutoUpdate = false;
+
+        private String _rpcAddress;
+        private Socket _rpcSocket;
+
+        private String _publishAddress;
+        private Socket _publishSocket;
+
         private Dictionary<String, ServiceInfo> _servicesByUID = new Dictionary<String, ServiceInfo>();
         private Dictionary<String, Dictionary<String, ServiceInfo>> _servicesByType =
             new Dictionary<String, Dictionary<String, ServiceInfo>>();
 
         /**
+        Event that is called after each update loop when in auto update mode.
+        **/
+        public event IdleEvent Idle;
+
+        /**
         Constructor.
         
-        @param  address The address the registry should listen on in ZMQ socket style (e.g. tcp://*:5555)
+        @param  rpcAddress      The address the registry should listen on for RPC commands in ZMQ socket style (e.g.
+                                tcp://*:5555)
+        @param  publishAddress  The address the registry should listen on for publishing service changes in ZMQ
+                                socket style (e.g. tcp://*:5555)
         **/
-        public Server(String address) {
-            _address = address;
+        public Server(String rpcAddress, String publishAddress) {
+            _rpcAddress = rpcAddress;
+            _publishAddress = publishAddress;
+
+            BindRPC();
+            BindPublish();
         }
 
         /**
-        Starts the main loop that receives and responds to messages. Does not return.
+        Finaliser.
         **/
-        public void Start() {
-            using(Context context = new Context(1)) {
-                using(Socket socket = context.Socket(SocketType.REP)) {
-                    socket.Bind(_address);
-                    
-                    while(true) {
-                        // Wait for next message from a client.
-                        MemoryStream stream = StreamUtil.CreateStream(socket.Recv());
+        ~Server() {
+            Dispose();
+        }
 
-                        // Read message type
-                        RegistryMessageType messageType = (RegistryMessageType)stream.ReadByte();
+        /**
+        Dispose of this object, unregisters all services and cleans up any resources it uses.
+        **/
+        public void Dispose() {
+            UnregisterAll();
 
-                        // Execute command
-                        switch(messageType) {
-                            case RegistryMessageType.RegisterService: {
-                                ServiceInfo serviceInfo = StreamUtil.Read<ServiceInfo>(stream);
+            _rpcSocket.Dispose();
+            _publishSocket.Dispose();
+            _context.Dispose();
 
-                                MemoryStream sendStream = new MemoryStream();
-                                StreamUtil.WriteBool(sendStream, Register(serviceInfo));
-                                socket.Send(sendStream.GetBuffer());
+            GC.SuppressFinalize(this);
+        }
 
-                                break;
-                            }
-                            case RegistryMessageType.UnregisterService: {
-                                String uid = StreamUtil.Read<String>(stream);
+        /**
+        Starts listening for RPC commands.
+        **/
+        private void BindRPC() {
+            _rpcSocket = _context.Socket(SocketType.REP);
+            _rpcSocket.Bind(_rpcAddress);
+        }
 
-                                MemoryStream sendStream = new MemoryStream();
-                                StreamUtil.WriteBool(sendStream, Unregister(uid));
-                                socket.Send(sendStream.GetBuffer());
+        /**
+        Starts listening for publish/subscribe requests for service changes.
+        **/
+        private void BindPublish() {
+            _publishSocket = _context.Socket(SocketType.PUB);
+            _publishSocket.Bind(_publishAddress);
+        }
 
-                                break;
-                            }
-                            case RegistryMessageType.FindByUID: {
-                                String uid = StreamUtil.Read<String>(stream);
-                                ServiceInfo serviceInfo = FindByUID(uid);
+        /**
+        Receives commands from clients.
+        **/
+        public void Update() {
+            // Get next messages from clients.
+            byte[] message = _rpcSocket.Recv(SendRecvOpt.NOBLOCK);
+            while(message != null) {
+                MemoryStream stream = StreamUtil.CreateStream(message);
 
-                                MemoryStream sendStream = new MemoryStream();
-                                StreamUtil.WriteWithNullCheck(sendStream, serviceInfo);
-                                socket.Send(sendStream.GetBuffer());
+                // Read message type
+                RegistryMessageType messageType = (RegistryMessageType)stream.ReadByte();
 
-                                break;
-                            }
-                            case RegistryMessageType.FindByType: {
-                                String type = StreamUtil.Read<String>(stream);
-                                ServiceInfo[] services = FindByType(type);
+                // Execute command
+                switch(messageType) {
+                    case RegistryMessageType.RegisterService: {
+                        ServiceInfo serviceInfo = StreamUtil.Read<ServiceInfo>(stream);
 
-                                MemoryStream sendStream = new MemoryStream();
-                                StreamUtil.WriteWithNullCheck(sendStream, services);
-                                socket.Send(sendStream.GetBuffer());
+                        MemoryStream sendStream = new MemoryStream();
+                        StreamUtil.WriteBool(sendStream, Register(serviceInfo));
+                        _rpcSocket.Send(sendStream.GetBuffer());
 
-                                break;
-                            }
-                        }
+                        break;
+                    }
+                    case RegistryMessageType.UnregisterService: {
+                        String uid = StreamUtil.Read<String>(stream);
 
-                        // Sleep to not hog CPU.
-                        // TODO: Use a thread with yielding?
-                        Thread.Sleep(33);
+                        MemoryStream sendStream = new MemoryStream();
+                        StreamUtil.WriteBool(sendStream, Unregister(uid));
+                        _rpcSocket.Send(sendStream.GetBuffer());
+
+                        break;
+                    }
+                    case RegistryMessageType.FindByUID: {
+                        String uid = StreamUtil.Read<String>(stream);
+                        ServiceInfo serviceInfo = FindByUID(uid);
+
+                        MemoryStream sendStream = new MemoryStream();
+                        StreamUtil.WriteWithNullCheck(sendStream, serviceInfo);
+                        _rpcSocket.Send(sendStream.GetBuffer());
+
+                        break;
+                    }
+                    case RegistryMessageType.FindByType: {
+                        String type = StreamUtil.Read<String>(stream);
+                        ServiceInfo[] services = FindByType(type);
+
+                        MemoryStream sendStream = new MemoryStream();
+                        StreamUtil.WriteWithNullCheck(sendStream, services);
+                        _rpcSocket.Send(sendStream.GetBuffer());
+
+                        break;
+                    }
+                    default: {
+                        Console.WriteLine("Received unknown message type: " + messageType);
+                        // TODO: Block sender after x unknown message types?
+                        _rpcSocket.Send();
+                        break;
                     }
                 }
             }
+        }
+
+        /**
+        Enters an infinite loop that automatically calls Update. After each update the Idle event is triggered. Use
+        StopAutoUpdate to break out of this loop.
+        **/
+        public void AutoUpdate() {
+            while(!_stopAutoUpdate) {
+                Update();
+                if(Idle != null) Idle();
+                Thread.Sleep(0);
+            }
+
+            _stopAutoUpdate = false;
+        }
+
+        /**
+        Stop the auto update loop.
+        **/
+        public void StopAutoUpdate() {
+            _stopAutoUpdate = true;
         }
 
         /**
@@ -138,6 +217,14 @@ namespace Protophase.Registry {
             }
 
             return false;
+        }
+
+        /**
+        Unregisters all services.
+        **/
+        private void UnregisterAll() {
+            List<String> uids = new List<String>(_servicesByUID.Keys);
+            foreach(String uid in uids) Unregister(uid);
         }
 
         /**
