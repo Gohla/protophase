@@ -143,12 +143,14 @@ namespace Protophase.Registry {
                     case RegistryMessageType.Pulse:
                         {
                             
-                            ApplicationInstance remoteApp = StreamUtil.Read<ApplicationInstance>(stream);
-                            Console.WriteLine("Received Pulse " + remoteApp.Guid);
-                            _servicesPerApplication[remoteApp.Guid].Activity = DateTime.Now;
+                            String remoteApp = StreamUtil.Read<String>(stream);
+                            Console.WriteLine("Received Pulse " + remoteApp);
+
+                            if (_servicesPerApplication.ContainsKey(remoteApp))
+                                _servicesPerApplication[remoteApp].Activity = DateTime.Now;
+
                             //TODO: lookup corresponding client and set an Activity variable to current timestamp
                             
-
                             _rpcSocket.Send();
                             break;
                         }
@@ -316,9 +318,6 @@ namespace Protophase.Registry {
             foreach (string unreg in unregUIDS)
                 Unregister(unreg);
         }
-
-
-
     }
 }
 

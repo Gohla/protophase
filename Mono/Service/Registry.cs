@@ -254,16 +254,19 @@ namespace Protophase.Service
 
         private void SendPulse()
         {
+            // Don't pulse if no objects are registered with the Register yet.
+            if(_objects.Count != 0) return;
+
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
             // Write message type
             stream.WriteByte((byte)RegistryMessageType.Pulse);
             // Write service info
-            StreamUtil.Write<ApplicationInstance>(stream, ApplicationInstance._appInstance);
+            StreamUtil.Write(stream, ApplicationInstance.Guid);
             // Send to registry and await results.
             _registrySocket.Send(stream.GetBuffer());
             _registrySocket.Recv();
-            Console.WriteLine("Sent Pulse " + ApplicationInstance._appInstance.Guid);
+            Console.WriteLine("Sent Pulse " + ApplicationInstance.Guid);
         }
 
         /**
