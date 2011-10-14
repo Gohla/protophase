@@ -1,0 +1,13 @@
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\obj\Debug\ResolveAssemblyReference.cache
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\bin\Debug\RegistryStresstester.exe
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\bin\Debug\RegistryStresstester.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\bin\Debug\Constants.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\bin\Debug\Service.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\bin\Debug\Shared.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\bin\Debug\clrzmq.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\bin\Debug\Service.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\bin\Debug\Shared.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\bin\Debug\Constants.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\bin\Debug\clrzmq.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\obj\Debug\RegistryStresstester.exe
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RegistryStresstester\obj\Debug\RegistryStresstester.pdb

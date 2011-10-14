@@ -1,0 +1,13 @@
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\obj\Debug\ResolveAssemblyReference.cache
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\bin\Debug\AisDataChecksumStatistics.exe
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\bin\Debug\AisDataChecksumStatistics.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\bin\Debug\AisTools.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\bin\Debug\Service.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\bin\Debug\Shared.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\bin\Debug\clrzmq.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\bin\Debug\Service.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\bin\Debug\Shared.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\bin\Debug\AisTools.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\bin\Debug\clrzmq.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\obj\Debug\AisDataChecksumStatistics.exe
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisDataChecksumStatistics\obj\Debug\AisDataChecksumStatistics.pdb

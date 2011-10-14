@@ -1,0 +1,11 @@
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\bin\Debug\RawAisServiceTestdata.exe
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\bin\Debug\RawAisServiceTestdata.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\bin\Debug\Service.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\bin\Debug\Shared.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\bin\Debug\clrzmq.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\bin\Debug\Service.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\bin\Debug\Shared.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\bin\Debug\clrzmq.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\obj\Debug\ResolveAssemblyReference.cache
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\obj\Debug\RawAisServiceTestdata.exe
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\RawAisServiceTestdata\obj\Debug\RawAisServiceTestdata.pdb

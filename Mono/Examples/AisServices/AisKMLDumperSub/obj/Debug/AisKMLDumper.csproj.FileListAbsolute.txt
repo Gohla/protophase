@@ -1,0 +1,15 @@
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\obj\Debug\ResolveAssemblyReference.cache
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\AisKMLDumper.exe
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\AisKMLDumper.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\AisReceiverServiceRPC.exe
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\AisTools.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\Service.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\Shared.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\clrzmq.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\Service.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\Shared.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\AisReceiverServiceRPC.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\AisTools.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\bin\Debug\clrzmq.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\obj\Debug\AisKMLDumper.exe
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisKMLDumperSub\obj\Debug\AisKMLDumper.pdb

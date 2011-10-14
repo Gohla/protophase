@@ -1,0 +1,11 @@
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\bin\Debug\AisTools.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\bin\Debug\AisTools.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\bin\Debug\Service.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\bin\Debug\Shared.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\bin\Debug\clrzmq.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\bin\Debug\Service.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\bin\Debug\Shared.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\bin\Debug\clrzmq.pdb
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\obj\Debug\ResolveAssemblyReference.cache
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\obj\Debug\AisTools.dll
+E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\AisTools\obj\Debug\AisTools.pdb
