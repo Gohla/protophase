@@ -8,11 +8,6 @@ using ZMQ;
 
 namespace Protophase.Registry {
     /**
-    Delegate for the idle event in Server.
-    **/
-    public delegate void IdleEvent();
-
-    /**
     Registry server that keeps a registry of existing objects.
     **/
     public class Server : IDisposable {
@@ -33,6 +28,11 @@ namespace Protophase.Registry {
         private ulong _nextApplicationID = 0;
 
         private static readonly float SERVICE_TIMEOUT = 5.0f;
+
+        /**
+        Delegate for the idle event.
+        **/
+        public delegate void IdleEvent();
 
         /**
         Event that is called after each update loop when in auto update mode.
@@ -92,9 +92,9 @@ namespace Protophase.Registry {
         }
 
         /**
-        Receives commands from clients.
+        Receives all network messages.
         **/
-        public void Update() {
+        private void Receive() {
             // Get next messages from clients.
             byte[] message = _rpcSocket.Recv(SendRecvOpt.NOBLOCK);
             while(message != null) {
@@ -158,7 +158,7 @@ namespace Protophase.Registry {
                             _servicesPerApplication[appID].Activity = DateTime.Now;
 
                         //TODO: lookup corresponding client and set an Activity variable to current timestamp
-                            
+
                         _rpcSocket.Send();
                         break;
                     }
@@ -173,7 +173,36 @@ namespace Protophase.Registry {
                 // Try to get more messages.
                 message = _rpcSocket.Recv(SendRecvOpt.NOBLOCK);
             }
+        }
 
+        /**
+        Removes services from timed out applications.
+        **/
+        private void RemoveTimedOutServices() {
+            // Find timed out applications and add their services to unregisterServices.
+            var timedOutApplications = _servicesPerApplication.Where(x => (x.Value.Activity.AddSeconds(SERVICE_TIMEOUT) < DateTime.Now)).Select(x => (x.Key));
+            List<String> unregisterServices = new List<String>();
+            foreach(ulong appID in timedOutApplications.ToArray()) {
+                Console.WriteLine("Application with ID " + appID + " timed out (" + SERVICE_TIMEOUT + " seconds)");
+                foreach(ServiceInfo serviceInfo in _servicesPerApplication[appID].Services) {
+                    unregisterServices.Add(serviceInfo.UID);
+                }
+            }
+
+            // Unregister all 'dead' services.
+            foreach(String uid in unregisterServices)
+                Unregister(uid);
+
+            // Unmap all timed out applications.
+            foreach(ulong appID in timedOutApplications.ToArray())
+                _servicesPerApplication.Remove(appID);
+        }
+
+        /**
+        Sends and receives all network messages.
+        **/
+        public void Update() {
+            Receive();
             RemoveTimedOutServices();
         }
 
@@ -185,7 +214,7 @@ namespace Protophase.Registry {
             while(!_stopAutoUpdate) {
                 Update();
                 if(Idle != null) Idle();
-                Thread.Sleep(1000);
+                Thread.Sleep(0);
             }
 
             _stopAutoUpdate = false;
@@ -206,7 +235,7 @@ namespace Protophase.Registry {
         
         @return True if service is successfully registered, false if a service with given UID already exists.
         **/
-        private bool Register(ulong appID, ServiceInfo serviceInfo) {
+        public bool Register(ulong appID, ServiceInfo serviceInfo) {
             // Don't allow duplicate UIDs.
             if(_servicesByUID.ContainsKey(serviceInfo.UID)) return false;
 
@@ -218,18 +247,17 @@ namespace Protophase.Registry {
             if(_servicesByType.TryGetValue(serviceInfo.Type, out dict)) {
                 dict.Add(serviceInfo.UID, serviceInfo);
             } else {
-                dict = new Dictionary<String, ServiceInfo> ();
+                dict = new Dictionary<String, ServiceInfo>();
                 dict.Add(serviceInfo.UID, serviceInfo);
                 _servicesByType.Add(serviceInfo.Type, dict);
             }
 
             // Map service by application ID.
             if(!_servicesPerApplication.ContainsKey(appID)) {
-                ServiceUidHolder  services = new ServiceUidHolder();
+                ServiceUidHolder services = new ServiceUidHolder();
                 services.Services.Add(serviceInfo);
                 _servicesPerApplication.Add(appID, services);
-            }
-            else
+            } else
                 _servicesPerApplication[appID].Services.Add(serviceInfo);
 
             Console.WriteLine("Added service: " + serviceInfo);
@@ -244,7 +272,7 @@ namespace Protophase.Registry {
         
         @return True if service is successfully unregistered, false if service with given UID does not exists.
         **/
-        private bool Unregister(String uid) {
+        public bool Unregister(String uid) {
             ServiceInfo serviceInfo;
             if(_servicesByUID.TryGetValue(uid, out serviceInfo)) {
                 // Unmap service per UID.
@@ -257,9 +285,9 @@ namespace Protophase.Registry {
                 }
 
                 // Unmap service per application ID.
-                var results =   from servicelist in _servicesPerApplication
-                                where servicelist.Value.Services.Where(x => (x.UID == uid)).Any()
-                                select new { servicelist.Key, ServiceInfo = servicelist.Value.Services.Where(x => (x.UID==uid)).Single() };
+                var results = from servicelist in _servicesPerApplication
+                              where servicelist.Value.Services.Where(x => (x.UID == uid)).Any()
+                              select new { servicelist.Key, ServiceInfo = servicelist.Value.Services.Where(x => (x.UID == uid)).Single() };
                 _servicesPerApplication[results.Single().Key].Services.Remove(results.Single().ServiceInfo);
 
                 Console.WriteLine("Removed service: " + serviceInfo);
@@ -273,7 +301,7 @@ namespace Protophase.Registry {
         /**
         Unregisters all services.
         **/
-        private void UnregisterAll() {
+        public void UnregisterAll() {
             List<String> uids = new List<String>(_servicesByUID.Keys);
             foreach(String uid in uids) Unregister(uid);
         }
@@ -285,7 +313,7 @@ namespace Protophase.Registry {
         
         @return The service info with given UID, or null if it was not found.
         **/
-        private ServiceInfo FindByUID(String uid) {
+        public ServiceInfo FindByUID(String uid) {
             ServiceInfo serviceInfo;
             if(_servicesByUID.TryGetValue(uid, out serviceInfo)) {
                 return serviceInfo;
@@ -301,7 +329,7 @@ namespace Protophase.Registry {
         
         @return The services info with given type, or null if no services were found.
         **/
-        private ServiceInfo[] FindByType(String type) {
+        public ServiceInfo[] FindByType(String type) {
             Dictionary<String, ServiceInfo> services;
             if(_servicesByType.TryGetValue(type, out services)) {
                 ServiceInfo[] servicesArray = new ServiceInfo[services.Count];
@@ -310,30 +338,6 @@ namespace Protophase.Registry {
             }
 
             return null;
-        }
-
-        /**
-        This method checks for dead connections. If a dead connection is found all services are removed from the
-        active services pool.
-        **/
-        private void RemoveTimedOutServices() {
-            // Find timed out applications and add their services to unregisterServices.
-            var timedOutApplications = _servicesPerApplication.Where(x => (x.Value.Activity.AddSeconds(SERVICE_TIMEOUT) < DateTime.Now)).Select(x => (x.Key));
-            List<String> unregisterServices = new List<String>();
-            foreach(ulong appID in timedOutApplications.ToArray()) {
-                Console.WriteLine("Application with ID " + appID + " timed out (" + SERVICE_TIMEOUT + " seconds)");
-                foreach(ServiceInfo serviceInfo in _servicesPerApplication[appID].Services) {
-                    unregisterServices.Add(serviceInfo.UID);
-                }
-            }
-
-            // Unregister all 'dead' services.
-            foreach(String uid in unregisterServices)
-                Unregister(uid);
-
-            // Unmap all timed out applications.
-            foreach(ulong appID in timedOutApplications.ToArray())
-                _servicesPerApplication.Remove(appID);
         }
     }
 }

@@ -11,14 +11,10 @@ using Exception = System.Exception;
 
 
 namespace Protophase.Service {
-
-    
     /**
     Generic remote service, used to receive published messages and send RPC requests to remote services.
     **/
-
-    public class Service : IDisposable
-    {
+    public class Service : IDisposable {
         private List<ServiceInfo> _servicesInfo = new List<ServiceInfo>();
         private String _serviceType;
         private Context _context;
@@ -29,7 +25,7 @@ namespace Protophase.Service {
         private event PublishedEvent _published;
 
         static internal List<Service> _serviceObjects = new List<Service>();
-        static private MultiValueDictionary<String, Service> _serviceObjectsByType = 
+        static private MultiValueDictionary<String, Service> _serviceObjectsByType =
             new MultiValueDictionary<String, Service>();
 
         /**
@@ -52,17 +48,8 @@ namespace Protophase.Service {
         @param  serviceInfo Information describing a remote service.
         @param  context     The ZMQ context.
         **/
-        public Service(ServiceInfo serviceInfo, Context context) {
-            _servicesInfo.Add(serviceInfo);
-            _serviceType = serviceInfo.Type;
-            _context = context;
-
-            Initialize();
-            ConnectAll();
-
-            _serviceObjects.Add(this);
-            _serviceObjectsByType.Add(_serviceType, this);
-        }
+        public Service(ServiceInfo serviceInfo, Context context)
+            : this(new ServiceInfo[] { serviceInfo }, context) { }
 
         /**
         Constructor.
@@ -132,7 +119,7 @@ namespace Protophase.Service {
         **/
         private void Subscribe() {
             // Empty byte array to subscribe to all messages.
-            _publishedSocket.Subscribe(new byte[]{});
+            _publishedSocket.Subscribe(new byte[] { });
         }
 
         /**
@@ -140,7 +127,7 @@ namespace Protophase.Service {
         **/
         private void Unsubscribe() {
             // Empty byte array to unsubscribe to all messages.
-            _publishedSocket.Unsubscribe(new byte[]{});
+            _publishedSocket.Unsubscribe(new byte[] { });
         }
 
         /**
