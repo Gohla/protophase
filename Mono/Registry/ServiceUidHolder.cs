@@ -21,7 +21,6 @@ namespace Protophase.Registry
             set
             {
                 _activity = value;
-                Console.WriteLine(_activity.ToLongTimeString());
             }
         }
     }

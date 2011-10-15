@@ -27,20 +27,18 @@ namespace Protophase.Service
         private String _registryAddress;
         private Socket _registrySocket;
 
+        private ulong _applicationID;
         private String _remoteAddress;
 
         private Dictionary<String, Socket> _rpcSockets = new Dictionary<String, Socket>();
         private Dictionary<String, Socket> _publishSockets = new Dictionary<String, Socket>();
 
-        
         private static readonly ushort INITIALPORT = 1024;
-
 
         /**
         Event that is called after each update loop when in auto update mode.
         **/
         public event IdleEvent Idle;
-
 
         /**
         Simple constructor.
@@ -50,11 +48,9 @@ namespace Protophase.Service
         **/
 
         public Registry(String registryAddress)
+            : this(registryAddress, "localhost")
         {
-            _registryAddress = registryAddress;
-            _remoteAddress = "localhost";
 
-            ConnectRegistry();
         }
 
         /**
@@ -71,6 +67,7 @@ namespace Protophase.Service
             _remoteAddress = remoteAddress;
 
             ConnectRegistry();
+            RequestApplicationID();
         }
 
         /**
@@ -106,6 +103,22 @@ namespace Protophase.Service
             if (_registrySocket != null) return;
             _registrySocket = _context.Socket(SocketType.REQ);
             _registrySocket.Connect(_registryAddress);
+        }
+
+        /**
+        Register this application with the registry to receive an application ID.
+        **/
+        private void RequestApplicationID() {
+            // Serialize to binary
+            MemoryStream stream = new MemoryStream();
+            // Write message type
+            stream.WriteByte((byte)RegistryMessageType.RegisterApplication);
+
+            // Send to registry and await results.
+            _registrySocket.Send(stream.GetBuffer());
+            byte[] message = _registrySocket.Recv();
+            MemoryStream receiveStream = new MemoryStream(message);
+            _applicationID =  StreamUtil.Read<ulong>(receiveStream);
         }
 
         /**
@@ -254,19 +267,16 @@ namespace Protophase.Service
 
         private void SendPulse()
         {
-            // Don't pulse if no objects are registered with the Register yet.
-            if(_objects.Count != 0) return;
-
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
             // Write message type
             stream.WriteByte((byte)RegistryMessageType.Pulse);
             // Write service info
-            StreamUtil.Write(stream, ApplicationInstance.Guid);
+            StreamUtil.Write(stream, _applicationID);
+
             // Send to registry and await results.
             _registrySocket.Send(stream.GetBuffer());
             _registrySocket.Recv();
-            Console.WriteLine("Sent Pulse " + ApplicationInstance.Guid);
         }
 
         /**
@@ -322,9 +332,11 @@ namespace Protophase.Service
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
             // Write message type
-            stream.WriteByte((byte) RegistryMessageType.RegisterService);
+            stream.WriteByte((byte) RegistryMessageType.RegisterNamedService);
+            // Write application id
+            StreamUtil.Write(stream, _applicationID);
             // Write service info
-            StreamUtil.Write<ServiceInfo>(stream, serviceInfo);
+            StreamUtil.Write(stream, serviceInfo);
 
             // Send to registry and await results.
             _registrySocket.Send(stream.GetBuffer());
@@ -339,7 +351,6 @@ namespace Protophase.Service
 
             return false;
         }
-
 
         /**
         Unregisters service with given UID.

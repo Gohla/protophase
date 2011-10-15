@@ -29,7 +29,6 @@ namespace Protophase.Shared {
             RPCPort = rpcPort;
             PublishPort = publishPort;
             RPCMethods = rpcMethods;
-            Guid = ApplicationInstance.Guid;
         }
 
         public String UID;
@@ -39,7 +38,6 @@ namespace Protophase.Shared {
         public ushort RPCPort;
         public ushort PublishPort;
         public List<String> RPCMethods;
-        public String Guid;
 
         /**
         Convert this object into a string representation.

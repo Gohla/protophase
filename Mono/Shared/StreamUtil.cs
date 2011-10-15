@@ -28,7 +28,7 @@ namespace Protophase.Shared {
         @param  stream  The stream to write to.
         @param  obj     The object to write. Cannot be null!
         **/
-        public static void Write<T>(Stream stream, T obj) where T : class {
+        public static void Write<T>(Stream stream, T obj) {
             _formatter.Serialize(stream, obj);
         }
 
@@ -67,7 +67,7 @@ namespace Protophase.Shared {
         
         @return Written object.
         **/
-        public static T Read<T>(Stream stream) where T : class {
+        public static T Read<T>(Stream stream) {
             return (T)_formatter.Deserialize(stream);
         }
 
