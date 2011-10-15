@@ -58,6 +58,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="MultiMap.cs" />
+    <Compile Include="RegistryPublishType.cs" />
     <Compile Include="ServiceInfo.cs" />
     <Compile Include="StreamUtil.cs" />
     <Compile Include="RegistryMessageType.cs" />

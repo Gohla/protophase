@@ -4,7 +4,6 @@ namespace Protophase.Shared {
     **/
     public enum RegistryMessageType {
         RegisterApplication,
-        RegisterNamedService,
         RegisterService,
         UnregisterService,
         FindByUID,

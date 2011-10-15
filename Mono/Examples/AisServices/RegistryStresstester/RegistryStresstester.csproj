@@ -80,10 +80,6 @@
       <Project>{712E9B63-96F4-464C-8102-237D307C8EF6}</Project>
       <Name>Shared</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Constants\Constants.csproj">
-      <Project>{17D12C29-1D85-41C3-9FAA-1DECF27AB3BC}</Project>
-      <Name>Constants</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

@@ -9,18 +9,23 @@ namespace SimpleRPCClient {
 
         private static void Main(string[] args) {
             using(Application app = new Application()) {
-                app.Start();
+                app.Start(500);
             }
         }
 
         protected override void Init() {
-            while(_testServer == null) _testServer = _registry.GetServiceByUID("TestServer");
+            while(_testServer == null) _testServer = _registry.GetServiceByType("TestServer");
         }
 
         protected override void Idle() {
-            String param = "TEST";
-            String returnVal = _testServer.Call<String>("TestMethod", param);
-            Console.WriteLine("Send RPC TestMethod, param: " + param + " return: " + returnVal);
+            try {
+                String param = "TEST";
+                String returnVal = _testServer.Call<String>("TestMethod", param);
+                Console.WriteLine("Send RPC TestMethod, param: " + param + " return: " + returnVal);
+            }
+            catch(System.Exception e) {
+            	Console.WriteLine("Failed to send RPC TestMethod: " + e.Message);
+            }
         }
     }
 }

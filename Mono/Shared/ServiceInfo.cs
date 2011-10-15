@@ -8,7 +8,7 @@ namespace Protophase.Shared {
     Information about a service.
     **/
     [Serializable]
-    public class ServiceInfo {
+    public class ServiceInfo : IEquatable<ServiceInfo> {
         /**
         Constructor.
         
@@ -38,6 +38,17 @@ namespace Protophase.Shared {
         public ushort RPCPort;
         public ushort PublishPort;
         public List<String> RPCMethods;
+
+        /**
+        Tests if this object is equal to another.
+        
+        @param  other   The object check equality against.
+        
+        @return True if the objects are equal, false if they are not.
+        **/
+        public bool Equals(ServiceInfo other) {
+            return UID == other.UID;
+        }
 
         /**
         Convert this object into a string representation.

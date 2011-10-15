@@ -34,11 +34,18 @@ namespace Protophase.Examples {
         /**
         Starts the application. Calls the Init virtual method and then goes into the update loop.
         **/
-        public void Start() {
-            _registry = new Registry("tcp://localhost:5555");
+        public void Start() { Start(0); }
+
+        /**
+        Starts the application. Calls the Init virtual method and then goes into the update loop.
+        
+        @param  millisecondsSleep   The number of milliseconds to sleep between updates.
+        **/
+        public void Start(int millisecondsSleep) {
+            _registry = new Registry();
             _registry.Idle += Idle;
             Init();
-            _registry.AutoUpdate();
+            _registry.AutoUpdate(millisecondsSleep);
         }
 
         /**

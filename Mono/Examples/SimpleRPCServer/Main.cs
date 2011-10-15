@@ -13,7 +13,7 @@ namespace SimpleRPCServer {
 
         protected override void Init() {
             TestServer testServer = new TestServer();
-            _registry.Register("TestServer", testServer);
+            _registry.Register(testServer);
         }
     }
 

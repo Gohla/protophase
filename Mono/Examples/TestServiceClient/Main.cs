@@ -16,7 +16,7 @@ namespace TestServiceClient {
                 Thread.Sleep(1000);
 
                 // Create registry client for registry at address tcp://localhost:5555.
-                using(Registry registry = new Registry("tcp://localhost:5555")) 
+                using(Registry registry = new Registry()) 
                 {
                     // Get HelloWorldResponder service, loop until it exists.
                     Service helloWorld1 = null;

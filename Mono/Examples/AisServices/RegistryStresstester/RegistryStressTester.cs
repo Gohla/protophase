@@ -62,7 +62,7 @@ namespace RegistryStresstester
             if (noUnregisterChance < 0 || noUnregisterChance > 1)
                 throw new Exception("noUnregisterChance must be in [0,1]");
             _noUnregisterChance = noUnregisterChance;
-            _registry = new Registry(Constants.REGISTRY_URL);
+            _registry = new Registry();
             Console.WriteLine("Created new Registry Churner");
         }
 
@@ -74,15 +74,13 @@ namespace RegistryStresstester
         {
             while (!_stop)
             {
-                string publishName = "Random" + new Random().Next(0,Int32.MaxValue);
                 DummyService d = new DummyService();
-                _registry.Register(publishName, d);
-                for (int i = 0; i < 50; i++)
-                    _registry.Publish(publishName, publishName);
-                Thread.Sleep(new Random().Next(500, 2000));
+                _registry.Register(d);
+   
+                Thread.Sleep(new Random().Next(50, 200));
 
                 if (new Random().NextDouble() >= _noUnregisterChance)
-                    _registry.Unregister(publishName);
+                    _registry.Unregister(d);
 
                 _registry.Update();
             }

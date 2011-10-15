@@ -7,7 +7,7 @@ namespace Protophase.Registry {
         public static void Main(String[] args) {
             Console.CancelKeyPress += CancelKeyPressHandler;
 
-            _server = new Server("tcp://*:5555", "tcp://*:5556");
+            _server = new Server();
             _server.AutoUpdate();
             _server.Dispose();
         }

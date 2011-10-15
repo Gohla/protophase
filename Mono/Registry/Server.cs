@@ -14,10 +14,10 @@ namespace Protophase.Registry {
         private Context _context = new Context(1);
         private bool _stopAutoUpdate = false;
 
-        private String _rpcAddress;
+        private String _remoteAddress;
+        private ushort _rpcPort;
+        private ushort _publishPort;
         private Socket _rpcSocket;
-
-        private String _publishAddress;
         private Socket _publishSocket;
 
         private Dictionary<String, ServiceInfo> _servicesByUID = new Dictionary<String, ServiceInfo>();
@@ -40,16 +40,28 @@ namespace Protophase.Registry {
         public event IdleEvent Idle;
 
         /**
+        Default constructor. Binds to all addresses using default ports.
+        **/
+        public Server() : this("*") { }
+
+        /**
+        Simple constructor. Binds to given remote address with default ports.
+        
+        @param  remoteAddress   The remote address to listen to. * to bind to all addresses.
+        **/
+        public Server(String remoteAddress) : this(remoteAddress, 5555, 5556) { }
+
+        /**
         Constructor.
         
-        @param  rpcAddress      The address the registry should listen on for RPC commands in ZMQ socket style (e.g.
-                                tcp://*:5555)
-        @param  publishAddress  The address the registry should listen on for publishing service changes in ZMQ
-                                socket style (e.g. tcp://*:5555)
+        @param  remoteAddress   The remote address to listen to. * to bind to all addresses.
+        @param  rpcPort         The RPC port to bind.
+        @param  publishPort     The publish port to bind.
         **/
-        public Server(String rpcAddress, String publishAddress) {
-            _rpcAddress = rpcAddress;
-            _publishAddress = publishAddress;
+        public Server(String remoteAddress, ushort rpcPort, ushort publishPort) {
+            _remoteAddress = remoteAddress;
+            _rpcPort = rpcPort;
+            _publishPort = publishPort;
 
             BindRPC();
             BindPublish();
@@ -80,7 +92,7 @@ namespace Protophase.Registry {
         **/
         private void BindRPC() {
             _rpcSocket = _context.Socket(SocketType.REP);
-            _rpcSocket.Bind(_rpcAddress);
+            _rpcSocket.Bind(Transport.TCP, _remoteAddress, _rpcPort);
         }
 
         /**
@@ -88,7 +100,7 @@ namespace Protophase.Registry {
         **/
         private void BindPublish() {
             _publishSocket = _context.Socket(SocketType.PUB);
-            _publishSocket.Bind(_publishAddress);
+            _publishSocket.Bind(Transport.TCP, _remoteAddress, _publishPort);
         }
 
         /**
@@ -112,7 +124,7 @@ namespace Protophase.Registry {
 
                         break;
                     }
-                    case RegistryMessageType.RegisterNamedService: {
+                    case RegistryMessageType.RegisterService: {
                         ulong appID = StreamUtil.Read<ulong>(stream);
                         ServiceInfo serviceInfo = StreamUtil.Read<ServiceInfo>(stream);
 
@@ -209,12 +221,22 @@ namespace Protophase.Registry {
         /**
         Enters an infinite loop that automatically calls Update. After each update the Idle event is triggered. Use
         StopAutoUpdate to break out of this loop.
+        
+        @param  millisecondsSleep   The number of milliseconds to sleep between updates.
         **/
-        public void AutoUpdate() {
+        public void AutoUpdate() { AutoUpdate(0); }
+
+        /**
+        Enters an infinite loop that automatically calls Update. After each update the Idle event is triggered. Use
+        StopAutoUpdate to break out of this loop.
+        
+        @param  millisecondsSleep   The number of milliseconds to sleep between updates.
+        **/
+        public void AutoUpdate(int millisecondsSleep) {
             while(!_stopAutoUpdate) {
                 Update();
                 if(Idle != null) Idle();
-                Thread.Sleep(0);
+                Thread.Sleep(millisecondsSleep);
             }
 
             _stopAutoUpdate = false;
@@ -260,6 +282,17 @@ namespace Protophase.Registry {
             } else
                 _servicesPerApplication[appID].Services.Add(serviceInfo);
 
+            // Publish service registered message
+            // Serialize to binary
+            MemoryStream stream = new MemoryStream();
+            // Write message type
+            stream.WriteByte((byte)RegistryPublishType.ServiceRegistered);
+            // Write service info
+            StreamUtil.Write(stream, serviceInfo);
+
+            // Publish message
+            _publishSocket.Send(stream.GetBuffer());
+
             Console.WriteLine("Added service: " + serviceInfo);
 
             return true;
@@ -288,9 +321,22 @@ namespace Protophase.Registry {
                 var results = from servicelist in _servicesPerApplication
                               where servicelist.Value.Services.Where(x => (x.UID == uid)).Any()
                               select new { servicelist.Key, ServiceInfo = servicelist.Value.Services.Where(x => (x.UID == uid)).Single() };
-                ulong appID = results.Single().Key;
-                if(_servicesPerApplication.ContainsKey(appID))
-                    _servicesPerApplication[appID].Services.Remove(results.Single().ServiceInfo);
+                if(results.Any()) {
+                    ulong appID = results.Single().Key;
+                    if(_servicesPerApplication.ContainsKey(appID))
+                        _servicesPerApplication[appID].Services.Remove(results.Single().ServiceInfo);
+                }
+
+                // Publish service unregistered message
+                // Serialize to binary
+                MemoryStream stream = new MemoryStream();
+                // Write message type
+                stream.WriteByte((byte)RegistryPublishType.ServiceUnregistered);
+                // Write service info
+                StreamUtil.Write(stream, serviceInfo);
+
+                // Publish message
+                _publishSocket.Send(stream.GetBuffer());
 
                 Console.WriteLine("Removed service: " + serviceInfo);
 

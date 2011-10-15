@@ -7,8 +7,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Protophase.Shared;
 using ZMQ;
-using Exception = System.Exception;
-
 
 namespace Protophase.Service {
     /**
@@ -20,12 +18,13 @@ namespace Protophase.Service {
         private Context _context;
         private Socket _rpcSocket;
         private Socket _publishedSocket;
-
+        
         private uint _publishedCounter = 0;
         private event PublishedEvent _published;
+        private bool _canUpdateServices;
 
         static internal List<Service> _serviceObjects = new List<Service>();
-        static private MultiValueDictionary<String, Service> _serviceObjectsByType =
+        static internal MultiValueDictionary<String, Service> _serviceObjectsByType =
             new MultiValueDictionary<String, Service>();
 
         /**
@@ -43,24 +42,27 @@ namespace Protophase.Service {
         }
 
         /**
-        Constructor.
+        Construct from one service info.
         
-        @param  serviceInfo Information describing a remote service.
-        @param  context     The ZMQ context.
+        @param  serviceInfo         Information describing a remote service.
+        @param  context             The ZMQ context.
+        @param  canUpdateServices   Set to true if the services may be updated.
         **/
-        public Service(ServiceInfo serviceInfo, Context context)
-            : this(new ServiceInfo[] { serviceInfo }, context) { }
+        public Service(ServiceInfo serviceInfo, Context context, bool canUpdateServices)
+            : this(new ServiceInfo[] { serviceInfo }, context, canUpdateServices) { }
 
         /**
-        Constructor.
+        Construct from multiple service info.
         
-        @param  servicesInfo Information describing a remote services.
-        @param  context      The ZMQ context.
+        @param  servicesInfo        Information describing remote services.
+        @param  context             The ZMQ context.
+        @param  canUpdateServices   Set to true if the services may be updated.
         **/
-        public Service(ServiceInfo[] servicesInfo, Context context) {
+        public Service(ServiceInfo[] servicesInfo, Context context, bool canUpdateServices) {
             _servicesInfo.InsertRange(0, servicesInfo);
             _serviceType = servicesInfo[0].Type; // TODO: Check if all services have the same type?
             _context = context;
+            _canUpdateServices = canUpdateServices;
 
             Initialize();
             ConnectAll();
@@ -103,23 +105,43 @@ namespace Protophase.Service {
         @param  serviceInfo The service info.
         **/
         private void Connect(ServiceInfo serviceInfo) {
-            _rpcSocket.Connect("tcp://" + serviceInfo.Address + ":" + serviceInfo.RPCPort);
-            _publishedSocket.Connect("tcp://" + serviceInfo.Address + ":" + serviceInfo.PublishPort);
+            _rpcSocket.Connect(Transport.TCP, serviceInfo.Address, serviceInfo.RPCPort);
+            _publishedSocket.Connect(Transport.TCP, serviceInfo.Address, serviceInfo.PublishPort);
         }
 
         /**
         Connects to the RPC and publish/subscribe sockets of all services.
         **/
         private void ConnectAll() {
-            foreach(ServiceInfo serviceInfo in _servicesInfo) Connect(serviceInfo);
+            foreach(ServiceInfo serviceInfo in _servicesInfo) 
+                Connect(serviceInfo);
         }
+
+        /**
+        Recreate the sockets so that the removed services are not connected anymore. Workaround because ZMQ sockets
+        do not have a disconnect function.
+        **/
+        private void RecreateSockets() {
+            // TODO: Call Receive first to clear the message queue?
+            // TODO: Make sure that no RPC calls or incomming published messages get lost.
+            
+            _rpcSocket.Dispose();
+            _publishedSocket.Dispose();
+
+            Initialize();
+            ConnectAll();
+
+            if(_publishedCounter >= 1) 
+                Subscribe();
+        }
+
 
         /**
         Subscribes for published messages.
         **/
         private void Subscribe() {
             // Empty byte array to subscribe to all messages.
-            _publishedSocket.Subscribe(new byte[] { });
+            _publishedSocket.Subscribe(new byte[0]);
         }
 
         /**
@@ -127,7 +149,7 @@ namespace Protophase.Service {
         **/
         private void Unsubscribe() {
             // Empty byte array to unsubscribe to all messages.
-            _publishedSocket.Unsubscribe(new byte[] { });
+            _publishedSocket.Unsubscribe(new byte[0]);
         }
 
         /**
@@ -152,8 +174,10 @@ namespace Protophase.Service {
         @param  name    The name of the method to call.
         @param  pars    A variable-length parameter list containing the parameters to pass to the method.
         
-        @return The object returned by the remote method call, or null if the call times out. Note that the method
-                can also return null.
+        @exception  Exception   Thrown when RPC call fails due to a failed service or no services being available.
+        
+        @return The object returned by the remote method call, or null if the call times out. Note that the method can 
+                also return null.
         **/
         public object Call(String name, params object[] pars) {
             // Serialize to binary
@@ -163,22 +187,76 @@ namespace Protophase.Service {
             StreamUtil.Write(stream, name);
             StreamUtil.Write(stream, pars);
 
-            // Send to object and await response.
-            _rpcSocket.Send(stream.GetBuffer());
-            // Receive return value
-            // TODO: Make timeout configurable
-            // TODO: Properly handle when the service doesn't respond (throw exception, fix socket state?)
-            byte[] message = _rpcSocket.Recv(2000);
-            if(message == null) return null;
-            MemoryStream receiveStream = StreamUtil.CreateStream(message);
-            return StreamUtil.ReadWithNullCheck<object>(receiveStream);
+            try
+            {
+                // Send to object and await response.
+                _rpcSocket.Send(stream.GetBuffer(), SendRecvOpt.NOBLOCK);
+
+                // Receive return value
+                // TODO: Make timeout configurable
+                byte[] message = _rpcSocket.Recv(2000);
+                if(message == null)
+                    throw new System.Exception("RPC call failed");
+                MemoryStream receiveStream = StreamUtil.CreateStream(message);
+                return StreamUtil.ReadWithNullCheck<object>(receiveStream);
+            }
+            catch (ZMQ.Exception e)
+            {
+                throw new System.Exception(e.Message);
+            }
         }
 
         /**
         Calls a method on the remote service (RPC) and tries to convert the return value.
+        
+        @param  name    The name of the method to call.
+        @param  pars    A variable-length parameter list containing the parameters to pass to the method.
+        
+        @exception  Exception   Thrown when RPC call fails due to a failed service or no services being available.
+        
+        @return The object returned by the remote method call, or null if the call times out. Note that the method can 
+                also return null.
         **/
         public T Call<T>(String name, params object[] pars) {
             return (T)Call(name, pars);
+        }
+
+        /**
+        Adds a service of the same type.
+        
+        @param  serviceInfo Information describing the service.
+        
+        @return True if it succeeds, false if given service info is not of the same type, is already added or services 
+                may not be updated.
+        **/
+        public bool AddService(ServiceInfo serviceInfo) {
+             // TODO: Contains in a List is slow, use a HashSet?
+            if(serviceInfo.Type != _serviceType || _servicesInfo.Contains(serviceInfo) || !_canUpdateServices) return false;
+
+            _servicesInfo.Add(serviceInfo);
+            Connect(serviceInfo);
+
+            return true;
+        }
+
+        /**
+        Removes a service.
+        
+        @param  serviceInfo Information describing the service.
+        
+        @return True if it succeeds, false if given service was not found or if services may not be updated.
+        **/
+        public bool RemoveService(ServiceInfo serviceInfo) {
+            if(!_canUpdateServices) return false;
+
+            // TODO: Remove in a List is slow, use a HashSet?
+            if(_servicesInfo.Remove(serviceInfo)) {
+                // TODO: Create a timer here so that multiple calls in a row only recreate sockets once.
+                RecreateSockets();
+                return true;
+            }
+
+            return false;
         }
 
         /**
