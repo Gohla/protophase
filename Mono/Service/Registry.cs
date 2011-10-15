@@ -115,8 +115,21 @@ namespace Protophase.Service {
         private ushort BindRPC(String uid) {
             if(!_rpcSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.REP);
+
                 ushort port = AvailablePort.Find(INITIALPORT);
-                socket.Bind("tcp://*:" + port);
+                bool bound = false;
+
+                // Retry binding socket until it succeeds. TODO: This could infinite loop..
+                while(!bound) {
+                    try {
+                        socket.Bind("tcp://*:" + port);
+                    }
+                    catch (ZMQ.Exception) {
+                        port = AvailablePort.Find(INITIALPORT);
+                    }
+
+                    bound = true;
+                }
 
                 _rpcSockets.Add(uid, socket);
                 return port;
@@ -136,8 +149,20 @@ namespace Protophase.Service {
         private ushort BindPublish(String uid) {
             if(!_publishSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.PUB);
+
                 ushort port = AvailablePort.Find(INITIALPORT);
-                socket.Bind("tcp://*:" + port);
+                bool bound = false;
+
+                // Retry binding socket until it succeeds. TODO: This could infinite loop..
+                while(!bound) {
+                    try {
+                        socket.Bind("tcp://*:" + port);
+                    } catch(ZMQ.Exception) {
+                        port = AvailablePort.Find(INITIALPORT);
+                    }
+
+                    bound = true;
+                }
 
                 _publishSockets.Add(uid, socket);
                 return port;

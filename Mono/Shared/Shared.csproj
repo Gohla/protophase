@@ -56,7 +56,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ApplicationInstance.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="MultiMap.cs" />
     <Compile Include="ServiceInfo.cs" />

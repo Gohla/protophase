@@ -8,3 +8,13 @@
 /Mono/Examples/SimpleRPCClient/obj
 /Mono/Examples/SimpleRPCServer/obj
 /Mono/Examples/Common/obj
+/Mono/Examples/AisServices/AisDataChecksumStatistics/obj
+/Mono/Examples/AisServices/AisDecoder/obj
+/Mono/Examples/AisServices/AisKMLDumperRPC/obj
+/Mono/Examples/AisServices/AisKMLDumperSub/obj
+/Mono/Examples/AisServices/AisReceiverServiceRPC/obj
+/Mono/Examples/AisServices/AisTools/obj
+/Mono/Examples/AisServices/Constants/obj
+/Mono/Examples/AisServices/RawAisService/obj
+/Mono/Examples/AisServices/RawAisServiceTestdata/obj
+/Mono/Examples/AisServices/RegistryStresstester/obj

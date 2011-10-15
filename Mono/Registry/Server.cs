@@ -288,7 +288,9 @@ namespace Protophase.Registry {
                 var results = from servicelist in _servicesPerApplication
                               where servicelist.Value.Services.Where(x => (x.UID == uid)).Any()
                               select new { servicelist.Key, ServiceInfo = servicelist.Value.Services.Where(x => (x.UID == uid)).Single() };
-                _servicesPerApplication[results.Single().Key].Services.Remove(results.Single().ServiceInfo);
+                ulong appID = results.Single().Key;
+                if(_servicesPerApplication.ContainsKey(appID))
+                    _servicesPerApplication[appID].Services.Remove(results.Single().ServiceInfo);
 
                 Console.WriteLine("Removed service: " + serviceInfo);
 
@@ -303,7 +305,8 @@ namespace Protophase.Registry {
         **/
         public void UnregisterAll() {
             List<String> uids = new List<String>(_servicesByUID.Keys);
-            foreach(String uid in uids) Unregister(uid);
+            foreach(String uid in uids) 
+                Unregister(uid);
         }
 
         /**

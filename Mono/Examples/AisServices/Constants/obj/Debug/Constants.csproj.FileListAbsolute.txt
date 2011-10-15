@@ -1,5 +1,0 @@
-E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\Constants\bin\Debug\Constants.dll
-E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\Constants\bin\Debug\Constants.pdb
-E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\Constants\obj\Debug\ResolveAssemblyReference.cache
-E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\Constants\obj\Debug\Constants.dll
-E:\Dropbox\School\IN4091 - System Specification Models\Workspace\protophase\Mono\Examples\AisServices\Constants\obj\Debug\Constants.pdb

@@ -16,8 +16,6 @@ namespace RegistryStresstester
         private static readonly List<RegistryChurnNode> _churnNodes = new List<RegistryChurnNode>();
         private static readonly List<Thread> _churnNodeThreads = new List<Thread>();
 
-
-
         static void Main(string[] args)
         {
             Console.CancelKeyPress += CancelKeyPressHandler;
@@ -76,7 +74,6 @@ namespace RegistryStresstester
         {
             while (!_stop)
             {
-                new Thread(StartReceiving).Start();
                 string publishName = "Random" + new Random().Next(0,Int32.MaxValue);
                 DummyService d = new DummyService();
                 _registry.Register(publishName, d);
@@ -86,24 +83,8 @@ namespace RegistryStresstester
 
                 if (new Random().NextDouble() >= _noUnregisterChance)
                     _registry.Unregister(publishName);
-            }
-        }
 
-        public void StartReceiving()
-        {
-            while (!_stop)
-            {
-                Thread.Sleep(10);
-                try
-                {
-                    if (_registry != null)
-                        _registry.Update();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
-                
+                _registry.Update();
             }
         }
 
@@ -113,6 +94,7 @@ namespace RegistryStresstester
             _stop = true;
         }
     }
+
     [ServiceType("DummyService"), ServiceVersion("0.1")]
     public class DummyService
     {
