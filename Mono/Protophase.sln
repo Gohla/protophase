@@ -54,9 +54,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RegistryStresstester", "Exa
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestCases", "TestCases", "{676AEDA9-DD73-4982-BFE1-E3942E356F54}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RPCServiceFailureReplace", "RPCServiceFailureReplace\RPCServiceFailureReplace.csproj", "{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PubSubServiceFailureReplace", "Examples\PubSubServiceFailureReplace\PubSubServiceFailureReplace.csproj", "{3A834019-4B64-400B-80BA-37FA45AA4160}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PubSubServiceFailureReplace", "PubSubServiceFailureReplace\PubSubServiceFailureReplace.csproj", "{3A834019-4B64-400B-80BA-37FA45AA4160}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RPCServiceFailureReplace", "Examples\RPCServiceFailureReplace\RPCServiceFailureReplace.csproj", "{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -248,16 +248,6 @@ Global
 		{155E20C8-49A7-4406-A2DA-045CE57F15FE}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{155E20C8-49A7-4406-A2DA-045CE57F15FE}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{155E20C8-49A7-4406-A2DA-045CE57F15FE}.Release|x86.ActiveCfg = Release|Any CPU
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Debug|x86.ActiveCfg = Debug|x86
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Debug|x86.Build.0 = Debug|x86
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Release|Any CPU.ActiveCfg = Release|x86
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Release|Mixed Platforms.Build.0 = Release|x86
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Release|x86.ActiveCfg = Release|x86
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Release|x86.Build.0 = Release|x86
 		{3A834019-4B64-400B-80BA-37FA45AA4160}.Debug|Any CPU.ActiveCfg = Debug|x86
 		{3A834019-4B64-400B-80BA-37FA45AA4160}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
 		{3A834019-4B64-400B-80BA-37FA45AA4160}.Debug|Mixed Platforms.Build.0 = Debug|x86
@@ -268,6 +258,16 @@ Global
 		{3A834019-4B64-400B-80BA-37FA45AA4160}.Release|Mixed Platforms.Build.0 = Release|x86
 		{3A834019-4B64-400B-80BA-37FA45AA4160}.Release|x86.ActiveCfg = Release|x86
 		{3A834019-4B64-400B-80BA-37FA45AA4160}.Release|x86.Build.0 = Release|x86
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Debug|x86.ActiveCfg = Debug|x86
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Debug|x86.Build.0 = Debug|x86
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Release|Any CPU.ActiveCfg = Release|x86
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Release|Mixed Platforms.Build.0 = Release|x86
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Release|x86.ActiveCfg = Release|x86
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -295,8 +295,8 @@ Global
 		{BA6FBA3A-61BF-4399-8B4D-95D59D99072A} = {D79925A6-94AE-4239-A4D9-CBB2292D34DB}
 		{292485D7-4BB3-4290-ADCB-C8EC3AFDC9A4} = {D79925A6-94AE-4239-A4D9-CBB2292D34DB}
 		{155E20C8-49A7-4406-A2DA-045CE57F15FE} = {676AEDA9-DD73-4982-BFE1-E3942E356F54}
-		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2} = {676AEDA9-DD73-4982-BFE1-E3942E356F54}
 		{3A834019-4B64-400B-80BA-37FA45AA4160} = {676AEDA9-DD73-4982-BFE1-E3942E356F54}
+		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2} = {676AEDA9-DD73-4982-BFE1-E3942E356F54}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItems = $0

@@ -18,3 +18,7 @@
 /Mono/Examples/AisServices/RawAisService/obj
 /Mono/Examples/AisServices/RawAisServiceTestdata/obj
 /Mono/Examples/AisServices/RegistryStresstester/obj
+
+/Mono/_UpgradeReport_Files
+/Mono/_ReSharper.Protophase
+/Mono/_ReSharper.Registry

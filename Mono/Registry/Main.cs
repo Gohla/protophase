@@ -8,7 +8,7 @@ namespace Protophase.Registry {
             Console.CancelKeyPress += CancelKeyPressHandler;
 
             _server = new Server();
-            _server.AutoUpdate();
+            _server.AutoUpdate(1);
             _server.Dispose();
         }
 

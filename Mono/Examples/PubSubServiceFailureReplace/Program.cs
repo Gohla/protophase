@@ -9,28 +9,121 @@ using Protophase.Shared;
 
 namespace RPCServiceFailureReplace
 {
-    /* There are four classes in this file
-     * Program (to run the test, simply a main)
-     * RpcServiceFailureReplaceTest - Actually runs the test
-     * RpcServerTest - The to be instantiated RpcServer (callee)
-     * RpcClientTest - The to be instantiated RpcClient (caller)
+
+    //Errors I get:
+
+    /* Occasionally:
+     * Subscriber error: Binary stream '205' does not contain a valid BinaryHeader. Pos
+        sible causes are invalid stream or object version change between serialization a
+        nd deserialization.
      * 
-     * The test in this file starts a rpc client (caller) which tries to call a remote method every second. (message index is sent along)
-     * The second part of the test serially starts three Server processes (callees) which die in various manners
-     * 
-     * The goal is to see the rpcClient (caller) be successfully directed to a new instance of a same type'd service. (RpcServerTest)
+     * Often:
+     * Bad address (originating from Service.cs.Recieve() (164))
      */
+
     class Program
     {
+        //Added this static field to easily set the sleep time for Update methods.
+        //when this value is tweaked the library becomes unstable.
+        public static readonly int WAITMS_Publisher = 1; //No sleep in publisher SEEMS to work without problems.
+        public static readonly int WAITMS_Subscriber = 1;
+
+        private static SubClientTest _subClient;
+        private static PubServerTest _pubServer;
+
         static void Main(string[] args)
         {
+            Console.CancelKeyPress += CancelKeyPressHandler;
+
+            //Start the client (subscriber)
+            _subClient = new SubClientTest();
+            var subClientThread = new Thread(_subClient.Start);
+            subClientThread.Start();
+            
+            //Start the server (publisher)
+            _pubServer = new PubServerTest();
+            var rpcServerThread = new Thread(_pubServer.Start);
+            rpcServerThread.Start();
+
+            /*
             var test = new PubSubServiceFailureReplaceTest();
             new Thread(test.Start).Start();
             while (test.Running)
                 Thread.Sleep(100);
+             */
+        }
+        // Handler for console cancel key presses.
+        private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs args)
+        {
+            args.Cancel = true; // Cancel quitting, do our own quitting.
+            _subClient.Stop();
+            _pubServer.StopNeatly();
         }
     }
 
+    [ServiceType("PubServerTest"), ServiceVersion("0.1")]
+    class PubServerTest
+    {
+        [Publisher]
+        public event PublishedDelegate PublishedMethod;
+
+        private bool _stop;
+        private Registry _registry;
+        public void Start()
+        {
+            _registry = new Registry();
+            _registry.Register(this);
+            int publishCounter = 0;
+            DateTime lastTime = DateTime.MinValue;
+            while (!_stop)
+            {
+                if (lastTime.AddSeconds(1) < DateTime.Now) //every second
+                {
+                    if (PublishedMethod != null)
+                    {
+                        PublishedMethod("Publising " + DateTime.Now.ToLongTimeString() + " - " + publishCounter.ToString());
+                        publishCounter++;
+                        lastTime = DateTime.Now;
+                    }
+                }
+                Thread.Sleep(Program.WAITMS_Publisher);
+                _registry.Update();
+            }
+            _registry.Unregister(this);
+        }
+
+        public void StopNeatly()
+        {
+            _stop = true;
+        }
+    }
+
+    class SubClientTest
+    {
+        private Registry _registry;
+        public void Start()
+        {
+            _registry = new Registry();
+            Service service = null;
+            while (service == null)
+                service = _registry.GetServiceByType("PubServerTest");
+            service.Published += Published;
+            _registry.AutoUpdate(Program.WAITMS_Subscriber);
+        }
+
+        private void Published(object obj)
+        {
+            Console.WriteLine("Published object received='" + obj + "'");
+        }
+
+        public void Stop()
+        {
+            _registry.StopAutoUpdate();
+        }
+    }
+
+
+    /*
     class PubSubServiceFailureReplaceTest
     {
         public PubSubServiceFailureReplaceTest()
@@ -62,6 +155,7 @@ namespace RPCServiceFailureReplace
                     Console.WriteLine("#########################Expect nothing################### - Stopped");
                     Thread.Sleep(10000);
                 }
+
 
                 {
                     //Start another RpcServerTest, hard kill (as if connection fails, comp breaks down etc.)
@@ -99,71 +193,7 @@ namespace RPCServiceFailureReplace
             _running = false;
         }
     }
-
-    //The Rpc exposed method. A running instance of this class is to be (violently) killed in order to analyse loss of RPC calls by the RpcClientTest class
-    [ServiceType("PubServerTest"), ServiceVersion("0.1")]
-    class PubServerTest
-    {
-        [Publisher]
-        public event PublishedDelegate PublishedMethod;
-
-        private bool _stop;
-        private Registry _registry;
-        public void Start()
-        {
-            _registry = new Registry();
-            _registry.Register(this);
-            int counter = 0;
-            try
-            {
-                while (!_stop)
-                {
-                    if (counter % 100 == 0)
-                        if (PublishedMethod != null)
-                            PublishedMethod("Publising " + DateTime.Now.ToLongTimeString() + (counter / 100).ToString());
-                    Thread.Sleep(10);
-                    counter++;
-                    _registry.Update();
-                }
-                _registry.Unregister(this);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("PublishServer error: " + e.Message);
-            }
-        }
-
-        public void StopNeatly()
-        {
-            _stop = true;
-        }
-    }
-
-    class SubClientTest
-    {
-        private Registry _registry;
-        private bool _stop;
-
-        public void Start()
-        {
-            _registry = new Registry();
-            Service service = null;
-            while (service == null)
-                service = _registry.GetServiceByType("PubServerTest");
-            service.Published += Published;
-            _registry.AutoUpdate(1);
-        }
-
-        private void Published(object obj)
-        {
-            Console.WriteLine("Published object received='" + obj + "'");
-        }
-
-        public void Stop()
-        {
-            _registry.StopAutoUpdate();
-        }
+     * */
 
 
-    }
 }
