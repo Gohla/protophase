@@ -21,12 +21,11 @@ namespace Protophase.Shared {
             while(tries > 0) {
                 try {
                     socket.Bind(transport, address, port);
+                    break;
                 } catch(ZMQ.Exception) {
                     port = AvailablePort.Find(INITIALPORT);
                     --tries;
                 }
-
-                break;
             }
 
             return port;
