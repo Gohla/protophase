@@ -48,6 +48,7 @@ namespace Protophase.Shared {
             IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
             
             // Get active connections
+            // TODO: System.Net.NetworkInformation.NetworkInformationException is thrown here sometimes..
             TcpConnectionInformation[] connections = properties.GetActiveTcpConnections();
             portArray.AddRange(from n in connections
                 where n.LocalEndPoint.Port >= minimalPort

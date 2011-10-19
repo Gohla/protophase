@@ -20,7 +20,7 @@ namespace Protophase.Service {
         private Socket _publishedSocket;
         
         private uint _publishedCounter = 0;
-        private event PublishedEvent _published;
+        private event PublishedDelegate _published;
         private bool _canUpdateServices;
 
         static internal List<Service> _serviceObjects = new List<Service>();
@@ -30,7 +30,7 @@ namespace Protophase.Service {
         /**
         Event that is called when a message is published for this service.
         **/
-        public event PublishedEvent Published {
+        public event PublishedDelegate Published {
             add {
                 _published += value;
                 if(++_publishedCounter == 1) Subscribe();

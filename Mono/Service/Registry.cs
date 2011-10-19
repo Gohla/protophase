@@ -14,6 +14,8 @@ namespace Protophase.Service {
         private Context _context = new Context(1);
         private Dictionary<String, object> _objects = new Dictionary<String, object>();
         private Dictionary<object, String> _objectsReverse = new Dictionary<object, String>();
+        private MultiValueDictionary<String, Tuple<PublishedDelegate, EventInfo>> _publishedDelegates =
+            new MultiValueDictionary<String, Tuple<PublishedDelegate, EventInfo>>();
         private bool _stopAutoUpdate = false;
 
         private String _registryAddress;
@@ -238,21 +240,28 @@ namespace Protophase.Service {
                         object obj;
                         object ret = null;
                         if(_objects.TryGetValue(uid, out obj)) {
-                            // TODO: Handle incorrect method name.
-                            Type type = obj.GetType();
-                            ret = type.GetMethod(name).Invoke(obj, pars);
+                            MethodInfo methodInfo = obj.GetType().GetMethod(name);
+
+                            // Check if method may be RPC called.
+                            if(methodInfo.GetCustomAttributes(typeof(RPC), true).Length == 0) {
+                                Console.WriteLine("RPC failed: Method " + name + " is not marked as being RPC callable.");
+                                socket.Send();
+                            } else {
+                                // Call the method with given parameters.
+                                ret = methodInfo.Invoke(obj, pars);
+
+                                // Send return value (or null if no value was returned)
+                                MemoryStream sendStream = new MemoryStream();
+                                StreamUtil.WriteWithNullCheck(sendStream, ret);
+                                socket.Send(sendStream.GetBuffer());
+                            }
+
                         } else {
-                            // TODO: Handle incorrect UID
+                            Console.WriteLine("RPC failed: Object with UID " + uid + " is not registered as a service.");
+                            socket.Send();
                         }
-
-                        // Send return value (or null if no value was returned)
-                        MemoryStream sendStream = new MemoryStream();
-                        StreamUtil.WriteWithNullCheck(sendStream, ret);
-                        socket.Send(sendStream.GetBuffer());
                     } catch(System.Exception e) {
-                        Console.WriteLine("RPC failed:" + e.Message + "\n" + e.StackTrace);
-
-                        // Send back empty reply so that the client doesn't time out.
+                        Console.WriteLine("RPC failed: " + e.Message);
                         socket.Send();
                     }
 
@@ -375,8 +384,9 @@ namespace Protophase.Service {
             EventInfo[] events = type.GetEvents();
             foreach(EventInfo evt in events) {
                 if(evt.GetCustomAttributes(typeof(Publisher), true).Length > 0) {
-                    PublishedEvent pubDelegate = (object pubObj) => Publish(uid, pubObj);
+                    PublishedDelegate pubDelegate = (object pubObj) => Publish(uid, pubObj);
                     evt.AddEventHandler(obj, pubDelegate);
+                    _publishedDelegates.Add(uid, Tuple.Create(pubDelegate, evt));
                 }
             }
 
@@ -455,11 +465,19 @@ namespace Protophase.Service {
                     _publishSockets.Remove(uid);
                 }
 
-                // Update own object dictionaries.
-                _objectsReverse.Remove(_objects[uid]);
-                _objects.Remove(uid);
+                object obj = _objects[uid];
 
-                // TODO: Unsubscribe from publish events.
+                // Unsubscribe from publish events.
+                List<Tuple<PublishedDelegate, EventInfo>> publishedDelegates;
+                if(_publishedDelegates.TryGetValue(uid, out publishedDelegates)) {
+                    foreach(Tuple<PublishedDelegate, EventInfo> tuple in publishedDelegates) {
+                        tuple.Item2.RemoveEventHandler(obj, tuple.Item1);
+                    }
+                }
+
+                // Update own object dictionaries.
+                _objectsReverse.Remove(obj);
+                _objects.Remove(uid);
 
                 return true;
             }
