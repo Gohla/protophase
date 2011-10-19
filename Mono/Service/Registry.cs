@@ -87,7 +87,7 @@ namespace Protophase.Service {
             for(int i = Service._serviceObjects.Count - 1; i >= 0; --i)
                 Service._serviceObjects[i].Dispose();
             _registryRPCSocket.Dispose();
-            _registryPublishSocket.Dispose();
+            if(_registryPublishSocket != null) _registryPublishSocket.Dispose();
             _context.Dispose();
             GC.SuppressFinalize(this);
         }

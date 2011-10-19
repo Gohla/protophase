@@ -11,20 +11,22 @@ namespace Protophase.Shared {
     **/
     public static class SocketExtension {
         public static readonly ushort INITIALPORT = 1024;
+        public static readonly int MAXTRIES = 1000;
 
         public static ushort BindAvailablePort(this Socket socket, Transport transport, String address) {
             ushort port = AvailablePort.Find(INITIALPORT);
-            bool bound = false;
+            int tries = MAXTRIES;
 
-            // Retry binding socket until it succeeds. TODO: This could infinite loop..
-            while(!bound) {
+            // Retry binding socket until it succeeds.
+            while(tries > 0) {
                 try {
                     socket.Bind(transport, address, port);
                 } catch(ZMQ.Exception) {
                     port = AvailablePort.Find(INITIALPORT);
+                    --tries;
                 }
 
-                bound = true;
+                break;
             }
 
             return port;
