@@ -29,7 +29,6 @@ namespace Protophase.Service {
         private Dictionary<String, Socket> _rpcSockets = new Dictionary<String, Socket>();
         private Dictionary<String, Socket> _publishSockets = new Dictionary<String, Socket>();
 
-        private static readonly ushort INITIALPORT = 1024;
         private static readonly String UID_GENERATOR_PREFIX = "__";
 
         /**
@@ -69,7 +68,6 @@ namespace Protophase.Service {
             _remoteAddress = remoteAddress;
             
             ConnectRegistryRPC();
-            ConnectRegistryPublish(); // TODO: This could be delayed until a service object is retrieved.
             RequestApplicationID();
         }
 
@@ -139,22 +137,7 @@ namespace Protophase.Service {
         private ushort BindRPC(String uid) {
             if(!_rpcSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.REP);
-
-                ushort port = AvailablePort.Find(INITIALPORT);
-                bool bound = false;
-
-                // Retry binding socket until it succeeds. TODO: This could infinite loop..
-                while(!bound) {
-                    try {
-                        socket.Bind(Transport.TCP, "*", port);
-                    }
-                    catch (ZMQ.Exception) {
-                        port = AvailablePort.Find(INITIALPORT);
-                    }
-
-                    bound = true;
-                }
-
+                ushort port = socket.BindAvailablePort(Transport.TCP, "*");
                 _rpcSockets.Add(uid, socket);
                 return port;
             }
@@ -173,21 +156,7 @@ namespace Protophase.Service {
         private ushort BindPublish(String uid) {
             if(!_publishSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.PUB);
-
-                ushort port = AvailablePort.Find(INITIALPORT);
-                bool bound = false;
-
-                // Retry binding socket until it succeeds. TODO: This could infinite loop..
-                while(!bound) {
-                    try {
-                        socket.Bind(Transport.TCP, "*", port);
-                    } catch(ZMQ.Exception) {
-                        port = AvailablePort.Find(INITIALPORT);
-                    }
-
-                    bound = true;
-                }
-
+                ushort port = socket.BindAvailablePort(Transport.TCP, "*");
                 _publishSockets.Add(uid, socket);
                 return port;
             }
@@ -199,6 +168,8 @@ namespace Protophase.Service {
         Receive published messages from the registry.
         **/
         private void ReceiveRegistryPublish() {
+            if(_registryPublishSocket == null) return;
+
             byte[] message = _registryPublishSocket.Recv(SendRecvOpt.NOBLOCK);
             while(message != null) {
                 MemoryStream stream = StreamUtil.CreateStream(message);
@@ -369,8 +340,8 @@ namespace Protophase.Service {
         Registers given service with the registry server with a unique name.
         
         @tparam T   Type of the service.
-        @param  nullableUID The UID of the service.
-        @param  obj         The service object.
+        @param  uid The UID of the service.
+        @param  obj The service object.
         
         @return True if service is successfully registered, false if a service with given UID already exists or if the 
                 UID is reserved.
@@ -560,6 +531,8 @@ namespace Protophase.Service {
             ServiceInfo serviceInfo = FindByUID(uid);
             if(serviceInfo == null) return null;
 
+            ConnectRegistryPublish();
+
             return new Service(serviceInfo, _context, false);
         }
 
@@ -575,6 +548,8 @@ namespace Protophase.Service {
         public Service GetServiceByType(String type) {
             ServiceInfo[] servicesInfo = FindByType(type);
             if(servicesInfo == null) return null;
+
+            ConnectRegistryPublish();
 
             return new Service(servicesInfo, _context, true);
         }

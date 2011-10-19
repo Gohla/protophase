@@ -3,8 +3,34 @@ using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Net;
 using System.Linq;
+using ZMQ;
 
 namespace Protophase.Shared {
+    /**
+    Utility class for binding sockets
+    **/
+    public static class SocketExtension {
+        public static readonly ushort INITIALPORT = 1024;
+
+        public static ushort BindAvailablePort(this Socket socket, Transport transport, String address) {
+            ushort port = AvailablePort.Find(INITIALPORT);
+            bool bound = false;
+
+            // Retry binding socket until it succeeds. TODO: This could infinite loop..
+            while(!bound) {
+                try {
+                    socket.Bind(transport, address, port);
+                } catch(ZMQ.Exception) {
+                    port = AvailablePort.Find(INITIALPORT);
+                }
+
+                bound = true;
+            }
+
+            return port;
+        }
+    }
+
     /**
     Utility class to find available network ports.
     **/
