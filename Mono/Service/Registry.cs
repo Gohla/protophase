@@ -134,12 +134,15 @@ namespace Protophase.Service {
         
         @param  uid The UID of the service.
         
+        @exception  Exception   Thrown when no available port could be found.
+        
         @return The port that is used for listening, or 0 if already listening.
         **/
         private ushort BindRPC(String uid) {
             if(!_rpcSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.REP);
                 ushort port = socket.BindAvailablePort(Transport.TCP, "*");
+                if(port == 0) throw new System.Exception("Could not find an available port to bind on.");
                 _rpcSockets.Add(uid, socket);
                 return port;
             }
@@ -153,12 +156,15 @@ namespace Protophase.Service {
         
         @param  uid The UID of the service.
         
+        @exception  Exception   Thrown when no available port could be found.
+        
         @return The port that is used for listening, or 0 if already listening.
         **/
         private ushort BindPublish(String uid) {
             if(!_publishSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.PUB);
                 ushort port = socket.BindAvailablePort(Transport.TCP, "*");
+                if(port == 0) throw new System.Exception("Could not find an available port to bind on.");
                 _publishSockets.Add(uid, socket);
                 return port;
             }
@@ -361,8 +367,15 @@ namespace Protophase.Service {
             Type type = typeof(T);
 
             // Bind RPC and publish sockets.
-            ushort rpcPort = BindRPC(uid);
-            ushort publishPort = BindPublish(uid);
+            ushort rpcPort;
+            ushort publishPort;
+            try {
+                rpcPort = BindRPC(uid);
+                publishPort = BindPublish(uid);
+            } catch (System.Exception e) {
+                Console.WriteLine("Could not register object: " + e.Message);
+                return false;
+            }
 
             // Get service type and version.
             ServiceType[] serviceTypes = type.GetCustomAttributes(typeof(ServiceType), true) as ServiceType[];
@@ -474,6 +487,7 @@ namespace Protophase.Service {
                         tuple.Item2.RemoveEventHandler(obj, tuple.Item1);
                     }
                 }
+                _publishedDelegates.Remove(uid);
 
                 // Update own object dictionaries.
                 _objectsReverse.Remove(obj);
