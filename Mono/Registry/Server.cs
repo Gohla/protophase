@@ -325,6 +325,9 @@ namespace Protophase.Registry {
                     ulong appID = results.Single().Key;
                     if(_servicesPerApplication.ContainsKey(appID))
                         _servicesPerApplication[appID].Services.Remove(results.Single().ServiceInfo);
+                    //Remove the application instance if there are no longer any services attached
+                    if (_servicesPerApplication[appID].Services.Count == 0)
+                        _servicesPerApplication.Remove(appID);
                 }
 
                 // Publish service unregistered message

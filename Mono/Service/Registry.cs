@@ -5,6 +5,7 @@ using System.Reflection;
 using Protophase.Shared;
 using ZMQ;
 using System.Threading;
+using Exception = System.Exception;
 
 namespace Protophase.Service {
     /**
@@ -66,7 +67,6 @@ namespace Protophase.Service {
             _registryRPCPort = rpcPort;
             _registryPublishPort = publishPort;
             _remoteAddress = remoteAddress;
-            
             ConnectRegistryRPC();
             RequestApplicationID();
         }
@@ -75,7 +75,14 @@ namespace Protophase.Service {
         Finaliser.
         **/
         ~Registry() {
-            Dispose();
+            try
+            {
+                Dispose();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
         }
 
         /**
