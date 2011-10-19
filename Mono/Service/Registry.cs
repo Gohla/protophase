@@ -593,6 +593,7 @@ namespace Protophase.Service {
             return new Service(servicesInfo, _context, true);
         }
 
+
         /**
         Publishes an object for the service with given UID.
         
