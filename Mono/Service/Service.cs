@@ -13,7 +13,7 @@ namespace Protophase.Service {
     Generic remote service, used to receive published messages and send RPC requests to remote services.
     **/
     public class Service : IDisposable {
-        private List<ServiceInfo> _servicesInfo = new List<ServiceInfo>();
+        private HashSet<ServiceInfo> _servicesInfo = new HashSet<ServiceInfo>();
         private String _serviceType;
         private Context _context;
         private Socket _rpcSocket;
@@ -54,13 +54,22 @@ namespace Protophase.Service {
         /**
         Construct from multiple service info.
         
-        @param  servicesInfo        Information describing remote services.
+        @param  servicesInfo        Information describing remote services. Services must be of the same type.
         @param  context             The ZMQ context.
         @param  canUpdateServices   Set to true if the services may be updated.
         **/
-        public Service(ServiceInfo[] servicesInfo, Context context, bool canUpdateServices) {
-            _servicesInfo.InsertRange(0, servicesInfo);
-            _serviceType = servicesInfo[0].Type; // TODO: Check if all services have the same type?
+        public Service(ServiceInfo[] servicesInfo, Context context, bool canUpdateServices)
+        {
+            if(servicesInfo.Length != 0) {
+                _serviceType = servicesInfo[0].Type;
+                foreach(ServiceInfo serviceInfo in servicesInfo)
+                {
+                    if(serviceInfo.Type != _serviceType)
+                        throw new System.Exception("All services must be of the same type.");
+
+                    _servicesInfo.Add(serviceInfo);
+                }
+            }
             _context = context;
             _canUpdateServices = canUpdateServices;
 
@@ -122,9 +131,6 @@ namespace Protophase.Service {
         do not have a disconnect function.
         **/
         private void RecreateSockets() {
-            // TODO: Call Receive first to clear the message queue?
-            // TODO: Make sure that no RPC calls or incomming published messages get lost.
-            
             _rpcSocket.Dispose();
             _publishedSocket.Dispose();
 
@@ -134,7 +140,6 @@ namespace Protophase.Service {
             if(_publishedCounter >= 1) 
                 Subscribe();
         }
-
 
         /**
         Subscribes for published messages.
@@ -169,21 +174,45 @@ namespace Protophase.Service {
         }
 
         /**
-        Calls a method on the remote service (RPC).
+        Calls a method on the remote service (RPC). If no message is returned after 5 seconds the call times out.
         
         @param  name    The name of the method to call.
         @param  pars    A variable-length parameter list containing the parameters to pass to the method.
         
         @exception  Exception   Thrown when RPC call fails due to a failed service or no services being available.
+        @exception  Exception   Thrown when given method name is not RPC callable.
         
         @return The object returned by the remote method call, or null if the call times out. Note that the method can 
                 also return null.
         **/
         public object Call(String name, params object[] pars) {
+            return Call(name, 5000, pars);
+        }
+
+        /**
+        Calls a method on the remote service (RPC).
+        
+        @param  name    The name of the method to call.
+        @param  timeout How long to wait for the RPC call to return. A timeout of 0 or lower will block until the
+                        message has arrived.
+        @param  pars    A variable-length parameter list containing the parameters to pass to the method.
+        
+        @exception  Exception   Thrown when RPC call fails due to a failed service or no services being available.
+        @exception  Exception   Thrown when given method name is not RPC callable.
+        
+        @return The object returned by the remote method call, or null if the call times out. Note that the method can 
+                also return null.
+        **/
+        public object Call(String name, int timeout, params object[] pars) {
+            // Validate method name.
+            foreach(ServiceInfo serviceInfo in _servicesInfo) {
+                if(!serviceInfo.RPCMethods.Contains(name))
+                    throw new System.Exception("One or more services does not have a method named " + name + " that can be RPC called");
+            }
+
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
             // Write UID method name
-            // TODO: Validate method name
             StreamUtil.Write(stream, name);
             StreamUtil.Write(stream, pars);
 
@@ -193,8 +222,12 @@ namespace Protophase.Service {
                 _rpcSocket.Send(stream.GetBuffer(), SendRecvOpt.NOBLOCK);
 
                 // Receive return value
-                // TODO: Make timeout configurable
-                byte[] message = _rpcSocket.Recv(2000);
+                byte[] message;
+                if(timeout <= 0)
+                    message = _rpcSocket.Recv();
+                else
+                    message = _rpcSocket.Recv(timeout);
+
                 if(message == null)
                     throw new System.Exception("RPC call failed");
                 MemoryStream receiveStream = StreamUtil.CreateStream(message);
@@ -207,17 +240,38 @@ namespace Protophase.Service {
         }
 
         /**
-        Calls a method on the remote service (RPC) and tries to convert the return value.
+        Calls a method on the remote service (RPC) and tries to convert the return value. 
+        
+        @param  name    The name of the method to call.
+        @param  timeout How long to wait for the RPC call to return. A timeout of 0 or lower will block until the
+                        message has arrived.
+        @param  pars    A variable-length parameter list containing the parameters to pass to the method.
+        
+        @exception  Exception   Thrown when RPC call fails due to a failed service or no services being available.
+        @exception  Exception   Thrown when given method name is not RPC callable.
+        
+        @return The object returned by the remote method call, or null if the call times out. Note that the method can 
+                also return null.
+        **/
+        public T Call<T>(String name, int timeout, params object[] pars) {
+            return (T)Call(name, timeout, pars);
+        }
+
+        /**
+        Calls a method on the remote service (RPC) and tries to convert the return value. If no message is returned 
+        after 5 seconds the call times out.
         
         @param  name    The name of the method to call.
         @param  pars    A variable-length parameter list containing the parameters to pass to the method.
         
         @exception  Exception   Thrown when RPC call fails due to a failed service or no services being available.
+        @exception  Exception   Thrown when given method name is not RPC callable.
         
         @return The object returned by the remote method call, or null if the call times out. Note that the method can 
                 also return null.
         **/
-        public T Call<T>(String name, params object[] pars) {
+        public T Call<T>(String name, params object[] pars)
+        {
             return (T)Call(name, pars);
         }
 
@@ -230,7 +284,6 @@ namespace Protophase.Service {
                 may not be updated.
         **/
         public bool AddService(ServiceInfo serviceInfo) {
-             // TODO: Contains in a List is slow, use a HashSet?
             if(serviceInfo.Type != _serviceType || _servicesInfo.Contains(serviceInfo) || !_canUpdateServices) return false;
 
             _servicesInfo.Add(serviceInfo);
@@ -249,9 +302,7 @@ namespace Protophase.Service {
         public bool RemoveService(ServiceInfo serviceInfo) {
             if(!_canUpdateServices) return false;
 
-            // TODO: Remove in a List is slow, use a HashSet?
             if(_servicesInfo.Remove(serviceInfo)) {
-                // TODO: Create a timer here so that multiple calls in a row only recreate sockets once.
                 RecreateSockets();
                 return true;
             }
