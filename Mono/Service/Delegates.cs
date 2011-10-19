@@ -4,5 +4,5 @@
     
     @param  obj The object that is published.
     **/
-    public delegate void PublishedEvent(object obj);
+    public delegate void PublishedDelegate(object obj);
 }

@@ -51,6 +51,16 @@ namespace Protophase.Shared {
         }
 
         /**
+        Calculates the hash code for this object.
+        
+        @return The hash code for this object.
+        **/
+        public override int GetHashCode()
+        {
+            return UID.GetHashCode();
+        }
+
+        /**
         Convert this object into a string representation.
         
         @return A string representation of this object.

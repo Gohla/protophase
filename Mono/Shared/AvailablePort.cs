@@ -21,12 +21,11 @@ namespace Protophase.Shared {
             while(tries > 0) {
                 try {
                     socket.Bind(transport, address, port);
+                    break;
                 } catch(ZMQ.Exception) {
                     port = AvailablePort.Find(INITIALPORT);
                     --tries;
                 }
-
-                break;
             }
 
             return port;
@@ -37,6 +36,26 @@ namespace Protophase.Shared {
     Utility class to find available network ports.
     **/
     public static class AvailablePort {
+        public static readonly int MAXTRIES = 1000;
+
+        /**
+        Gets active TCP connections. Recursive function because properties.GetActiveTcpConnections may throw an
+        exception sometimes...
+        
+        @return The active TCP connections.
+        **/
+        public static TcpConnectionInformation[] GetActiveTcpConnections(IPGlobalProperties properties, int tries) {
+            while(tries > 0) {
+                try {
+                    return properties.GetActiveTcpConnections();
+                } catch(NetworkInformationException) {
+                    return GetActiveTcpConnections(properties, tries - 1);
+                }
+            }
+
+            return null;
+        }
+
         /**
         Searches for the first available TPC/UDP port.
         
@@ -48,19 +67,20 @@ namespace Protophase.Shared {
             List<int> portArray = new List<int>();
             IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
             
-            // Get active connections
-            TcpConnectionInformation[] connections = properties.GetActiveTcpConnections();
+            // Get active TCP connections
+            TcpConnectionInformation[] connections = GetActiveTcpConnections(properties, MAXTRIES);
+            if(connections == null) return 0;
             portArray.AddRange(from n in connections
-                where n.LocalEndPoint.Port >= minimalPort
-                select n.LocalEndPoint.Port);
+                               where n.LocalEndPoint.Port >= minimalPort
+                               select n.LocalEndPoint.Port);
 
-            // Get active tcp listners - WCF service listening in tcp
+            // Get active TCP listners - WCF service listening in TCP
             IPEndPoint[] endPoints = properties.GetActiveTcpListeners();
             portArray.AddRange(from n in endPoints
                 where n.Port >= minimalPort
                 select n.Port);
             
-            // Get active udp listeners
+            // Get active UDP listeners
             endPoints = properties.GetActiveUdpListeners();
             portArray.AddRange(from n in endPoints
                 where n.Port >= minimalPort

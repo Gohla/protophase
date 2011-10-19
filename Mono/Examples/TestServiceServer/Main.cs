@@ -65,9 +65,9 @@ namespace TestServiceServer {
         public int Number;
 
         [Publisher]
-        public event PublishedEvent Hello;
+        public event PublishedDelegate Hello;
         [Publisher]
-        public event PublishedEvent World;
+        public event PublishedDelegate World;
 
         public HelloWorldResponder(int number) {
             Number = number;
