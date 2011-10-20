@@ -56,8 +56,7 @@ namespace Protophase.Service {
         @param  registry            The registry this service belongs to.
         @param  canUpdateServices   Set to true if the services may be updated.
         **/
-        public Service(ServiceInfo[] servicesInfo, Registry registry, bool canUpdateServices)
-        {
+        public Service(ServiceInfo[] servicesInfo, Registry registry, bool canUpdateServices) {
             if(servicesInfo.Length != 0) {
                 _serviceType = servicesInfo[0].Type;
                 foreach(ServiceInfo serviceInfo in servicesInfo)
@@ -87,8 +86,7 @@ namespace Protophase.Service {
         /**
         Dispose of this object, unregisters all services and cleans up any resources it uses.
         **/
-        public void Dispose()
-        {
+        public void Dispose() {
             Dispose(false);
         }
 
@@ -213,7 +211,7 @@ namespace Protophase.Service {
             // Validate method name.
             foreach(ServiceInfo serviceInfo in _servicesInfo) {
                 if(!serviceInfo.RPCMethods.Contains(name))
-                    throw new System.Exception("One or more services does not have a method named " + name + " that can be RPC called");
+                    throw new System.Exception("One or more service(s) do not have a method named " + name + " that can be RPC called");
             }
 
             // Serialize to binary
@@ -222,8 +220,7 @@ namespace Protophase.Service {
             StreamUtil.Write(stream, name);
             StreamUtil.Write(stream, pars);
 
-            try
-            {
+            try {
                 // Send to object and await response.
                 _rpcSocket.Send(stream.GetBuffer(), SendRecvOpt.NOBLOCK);
 
@@ -235,13 +232,12 @@ namespace Protophase.Service {
                     message = _rpcSocket.Recv(timeout);
 
                 if(message == null)
-                    throw new System.Exception("RPC call failed");
+                    throw new System.Exception("RPC call " + name + " failed: Timeout (" + timeout + "ms)");
+
                 MemoryStream receiveStream = StreamUtil.CreateStream(message);
                 return StreamUtil.ReadWithNullCheck<object>(receiveStream);
-            }
-            catch (ZMQ.Exception e)
-            {
-                throw new System.Exception(e.Message);
+            } catch (ZMQ.Exception e) {
+                throw new System.Exception("RPC call " + name + " failed: " + e.Message);
             }
         }
 
@@ -276,8 +272,7 @@ namespace Protophase.Service {
         @return The object returned by the remote method call, or null if the call times out. Note that the method can 
                 also return null.
         **/
-        public T Call<T>(String name, params object[] pars)
-        {
+        public T Call<T>(String name, params object[] pars) {
             return (T)Call(name, pars);
         }
 
@@ -290,7 +285,8 @@ namespace Protophase.Service {
                 may not be updated.
         **/
         public bool AddService(ServiceInfo serviceInfo) {
-            if(serviceInfo.Type != _serviceType || _servicesInfo.Contains(serviceInfo) || !_canUpdateServices) return false;
+            if(serviceInfo.Type != _serviceType || _servicesInfo.Contains(serviceInfo) || !_canUpdateServices) 
+                return false;
 
             _servicesInfo.Add(serviceInfo);
             Connect(serviceInfo);
