@@ -15,7 +15,7 @@ namespace Protophase.Service {
     public class Service : IDisposable {
         private HashSet<ServiceInfo> _servicesInfo = new HashSet<ServiceInfo>();
         private String _serviceType;
-        private Context _context;
+        private Registry _registry;
         private Socket _rpcSocket;
         private Socket _publishedSocket;
         
@@ -45,20 +45,22 @@ namespace Protophase.Service {
         Construct from one service info.
         
         @param  serviceInfo         Information describing a remote service.
-        @param  context             The ZMQ context.
+        @param  registry            The registry this service belongs to.
         @param  canUpdateServices   Set to true if the services may be updated.
         **/
-        public Service(ServiceInfo serviceInfo, Context context, bool canUpdateServices)
-            : this(new ServiceInfo[] { serviceInfo }, context, canUpdateServices) { }
+        public Service(ServiceInfo serviceInfo, Registry registry, bool canUpdateServices)
+            : this(new ServiceInfo[] { serviceInfo }, registry, canUpdateServices) { }
 
         /**
         Construct from multiple service info.
         
+        @exception  Exception   When not all services are of the same type.
+        
         @param  servicesInfo        Information describing remote services. Services must be of the same type.
-        @param  context             The ZMQ context.
+        @param  registry            The registry this service belongs to.
         @param  canUpdateServices   Set to true if the services may be updated.
         **/
-        public Service(ServiceInfo[] servicesInfo, Context context, bool canUpdateServices)
+        public Service(ServiceInfo[] servicesInfo, Registry registry, bool canUpdateServices)
         {
             if(servicesInfo.Length != 0) {
                 _serviceType = servicesInfo[0].Type;
@@ -70,14 +72,13 @@ namespace Protophase.Service {
                     _servicesInfo.Add(serviceInfo);
                 }
             }
-            _context = context;
+            _registry = registry;
             _canUpdateServices = canUpdateServices;
 
             Initialize();
             ConnectAll();
 
-            _serviceObjects.Add(this);
-            _serviceObjectsByType.Add(_serviceType, this);
+            _registry.AddService(this, _serviceType);
         }
 
         /**
@@ -91,8 +92,7 @@ namespace Protophase.Service {
         Dispose of this object, cleaning up any resources it uses.
         **/
         public void Dispose() {
-            _serviceObjects.Remove(this);
-            _serviceObjectsByType.Remove(_serviceType, this);
+            _registry.RemoveService(this, _serviceType);
 
             _rpcSocket.Dispose();
             _publishedSocket.Dispose();
@@ -104,8 +104,8 @@ namespace Protophase.Service {
         Initializes sockets.
         **/
         private void Initialize() {
-            _rpcSocket = _context.Socket(SocketType.REQ);
-            _publishedSocket = _context.Socket(SocketType.SUB);
+            _rpcSocket = _registry.Context.Socket(SocketType.REQ);
+            _publishedSocket = _registry.Context.Socket(SocketType.SUB);
         }
 
         /**

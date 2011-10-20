@@ -32,6 +32,10 @@ namespace Protophase.Service {
         private Dictionary<String, Socket> _rpcSockets = new Dictionary<String, Socket>();
         private Dictionary<String, Socket> _publishSockets = new Dictionary<String, Socket>();
 
+        private List<Service> _serviceObjects = new List<Service>();
+        private MultiValueDictionary<String, Service> _serviceObjectsByType =
+            new MultiValueDictionary<String, Service>();
+
         private static readonly String UID_GENERATOR_PREFIX = "__";
 
         /**
@@ -43,6 +47,11 @@ namespace Protophase.Service {
         Event that is called after each update loop when in auto update mode.
         **/
         public event IdleEvent Idle;
+
+        /**
+        Gets the ZMQ context.
+        **/
+        public Context Context { get { return _context; } }
 
         /**
         Default constructor. Connects to localhost registry with default ports.
@@ -93,12 +102,28 @@ namespace Protophase.Service {
         public void Dispose() {
             UnregisterAll();
             // Dispose all service objects before disposing of the context.
-            for(int i = Service._serviceObjects.Count - 1; i >= 0; --i)
-                Service._serviceObjects[i].Dispose();
+            for(int i = _serviceObjects.Count - 1; i >= 0; --i)
+                _serviceObjects[i].Dispose();
             _registryRPCSocket.Dispose();
             if(_registryPublishSocket != null) _registryPublishSocket.Dispose();
             _context.Dispose();
             GC.SuppressFinalize(this);
+        }
+
+        /**
+        Adds a service to the service lists. Should only be called from the Service class.
+        **/
+        internal void AddService(Service service, String type) {
+            _serviceObjects.Add(service);
+            _serviceObjectsByType.Add(type, service);
+        }
+
+        /**
+        Removes a service from the service lists. Should only be called from the Service class.
+        **/
+        internal void RemoveService(Service service, String type) {
+            _serviceObjects.Remove(service);
+            _serviceObjectsByType.Remove(type, service);
         }
 
         /**
@@ -214,7 +239,7 @@ namespace Protophase.Service {
         **/
         private void ServiceRegistered(ServiceInfo serviceInfo) {
             List<Service> services;
-            if(Service._serviceObjectsByType.TryGetValue(serviceInfo.Type, out services)) {
+            if(_serviceObjectsByType.TryGetValue(serviceInfo.Type, out services)) {
                 foreach(Service service in services)
                     service.AddService(serviceInfo);
             }
@@ -227,7 +252,7 @@ namespace Protophase.Service {
         **/
         private void ServiceUnregistered(ServiceInfo serviceInfo) {
             List<Service> services;
-            if(Service._serviceObjectsByType.TryGetValue(serviceInfo.Type, out services)) {
+            if(_serviceObjectsByType.TryGetValue(serviceInfo.Type, out services)) {
                 foreach(Service service in services)
                     service.RemoveService(serviceInfo);
             }
@@ -313,7 +338,7 @@ namespace Protophase.Service {
         **/
         public void Update() {
             Receive();
-            foreach(Service service in Service._serviceObjects) service.Receive();
+            foreach(Service service in _serviceObjects) service.Receive();
             SendPulse();
         }
 
@@ -572,7 +597,7 @@ namespace Protophase.Service {
 
             ConnectRegistryPublish();
 
-            return new Service(serviceInfo, _context, false);
+            return new Service(serviceInfo, this, false);
         }
 
         /**
@@ -590,7 +615,7 @@ namespace Protophase.Service {
 
             ConnectRegistryPublish();
 
-            return new Service(servicesInfo, _context, true);
+            return new Service(servicesInfo, this, true);
         }
 
 
