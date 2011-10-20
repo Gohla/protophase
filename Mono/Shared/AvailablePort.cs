@@ -10,11 +10,13 @@ namespace Protophase.Shared {
     Utility class for binding sockets
     **/
     public static class SocketExtension {
-        public static readonly ushort INITIALPORT = 1024;
         public static readonly int MAXTRIES = 1000;
+        private static readonly Random _random = new Random();
+
+        private static ushort RandomInitialPort { get { return (ushort)(1024 + _random.Next(0, 1280) * 50); } }
 
         public static ushort BindAvailablePort(this Socket socket, Transport transport, String address) {
-            ushort port = AvailablePort.Find(INITIALPORT);
+            ushort port = AvailablePort.Find(RandomInitialPort);
             int tries = MAXTRIES;
 
             // Retry binding socket until it succeeds.
@@ -23,7 +25,7 @@ namespace Protophase.Shared {
                     socket.Bind(transport, address, port);
                     break;
                 } catch(ZMQ.Exception) {
-                    port = AvailablePort.Find(INITIALPORT);
+                    port = AvailablePort.Find(RandomInitialPort);
                     --tries;
                 }
             }

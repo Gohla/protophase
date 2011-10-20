@@ -9,6 +9,7 @@
 /Mono/Examples/SimpleRPCServer/obj
 /Mono/Examples/PubSubServiceFailureReplace/obj
 /Mono/Examples/RPCServiceFailureReplace/obj
+/Mono/Examples/RegistryStresstester/obj
 /Mono/Examples/Common/obj
 /Mono/Examples/AisServices/AisDataChecksumStatistics/obj
 /Mono/Examples/AisServices/AisDecoder/obj
@@ -19,7 +20,6 @@
 /Mono/Examples/AisServices/Constants/obj
 /Mono/Examples/AisServices/RawAisService/obj
 /Mono/Examples/AisServices/RawAisServiceTestdata/obj
-/Mono/Examples/AisServices/RegistryStresstester/obj
 
 /Mono/_UpgradeReport_Files
 /Mono/_ReSharper.Protophase
