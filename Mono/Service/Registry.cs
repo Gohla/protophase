@@ -86,28 +86,35 @@ namespace Protophase.Service {
         Finaliser.
         **/
         ~Registry() {
-            try
-            {
-                Dispose();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
+            Dispose(true);
         }
 
         /**
         Dispose of this object, unregisters all services and cleans up any resources it uses.
         **/
         public void Dispose() {
-            UnregisterAll();
+            Dispose(false);
+        }
+
+        /**
+        Dispose of this object, unregisters all services and cleans up any resources it uses.
+        **/
+        protected virtual void Dispose(bool finalized) {
+            // Unregister all service objects.
+            if(!finalized) UnregisterAll();
+
             // Dispose all service objects before disposing of the context.
             for(int i = _serviceObjects.Count - 1; i >= 0; --i)
                 _serviceObjects[i].Dispose();
-            _registryRPCSocket.Dispose();
-            if(_registryPublishSocket != null) _registryPublishSocket.Dispose();
-            _context.Dispose();
-            GC.SuppressFinalize(this);
+
+            if(!finalized) {
+                // Dispose context and sockets.
+                _registryRPCSocket.Dispose();
+                if(_registryPublishSocket != null) _registryPublishSocket.Dispose();
+                _context.Dispose();
+
+                GC.SuppressFinalize(this);
+            }
         }
 
         /**
