@@ -27,6 +27,8 @@ namespace Protophase.Service {
 
         private ulong _applicationID;
         private ulong _uidPrefix = 0;
+        private float _pulseTimestep;
+        private DateTime _lastPulse = DateTime.MinValue;
         private String _remoteAddress;
 
         private Dictionary<String, Socket> _rpcSockets = new Dictionary<String, Socket>();
@@ -37,6 +39,7 @@ namespace Protophase.Service {
             new MultiValueDictionary<String, Service>();
 
         private static readonly String UID_GENERATOR_PREFIX = "__";
+        private static readonly float REGISTRY_TIMEOUT_DIVIDER = 2.0f;
 
         /**
         Delegate for the idle event.
@@ -79,7 +82,7 @@ namespace Protophase.Service {
             _registryPublishPort = publishPort;
             _remoteAddress = remoteAddress;
             ConnectRegistryRPC();
-            RequestApplicationID();
+            RegisterApplication();
         }
 
         /**
@@ -153,9 +156,9 @@ namespace Protophase.Service {
         }
 
         /**
-        Register this application with the registry to receive an application ID.
+        Register this application with the registry.
         **/
-        private void RequestApplicationID() {
+        private void RegisterApplication() {
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
             // Write message type
@@ -166,6 +169,7 @@ namespace Protophase.Service {
             byte[] message = _registryRPCSocket.Recv();
             MemoryStream receiveStream = new MemoryStream(message);
             _applicationID = StreamUtil.Read<ulong>(receiveStream);
+            _pulseTimestep = StreamUtil.Read<float>(receiveStream) / REGISTRY_TIMEOUT_DIVIDER;
         }
 
         /**
@@ -328,16 +332,20 @@ namespace Protophase.Service {
         Send a Pulse message so the registry knows we're alive.
         **/
         private void SendPulse() {
-            // Serialize to binary
-            MemoryStream stream = new MemoryStream();
-            // Write message type
-            stream.WriteByte((byte)RegistryMessageType.Pulse);
-            // Write service info
-            StreamUtil.Write(stream, _applicationID);
+            if (_lastPulse.AddSeconds(_pulseTimestep) < DateTime.Now) {
+                // Serialize to binary
+                MemoryStream stream = new MemoryStream();
+                // Write message type
+                stream.WriteByte((byte)RegistryMessageType.Pulse);
+                // Write service info
+                StreamUtil.Write(stream, _applicationID);
 
-            // Send to registry and await results.
-            _registryRPCSocket.Send(stream.GetBuffer());
-            _registryRPCSocket.Recv();
+                // Send to registry and await results.
+                _registryRPCSocket.Send(stream.GetBuffer());
+                _registryRPCSocket.Recv();
+
+                _lastPulse = DateTime.Now;
+            }
         }
 
         /**

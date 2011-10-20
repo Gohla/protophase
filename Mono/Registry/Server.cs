@@ -132,6 +132,7 @@ namespace Protophase.Registry {
                     case RegistryMessageType.RegisterApplication: {
                         MemoryStream sendStream = new MemoryStream();
                         StreamUtil.Write(sendStream, _nextApplicationID++);
+                        StreamUtil.Write(sendStream, SERVICE_TIMEOUT);
                         _rpcSocket.Send(sendStream.GetBuffer());
 
                         break;
