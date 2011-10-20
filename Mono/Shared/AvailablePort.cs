@@ -38,7 +38,10 @@ namespace Protophase.Shared {
     Utility class to find available network ports.
     **/
     public static class AvailablePort {
-        public static readonly int MAXTRIES = 1000;
+        private static readonly int MAXTRIES = 1000;
+        private static readonly ushort USABLE_PORTS = ushort.MaxValue - 1024;
+        private static readonly List<ushort> _availablePorts = new List<ushort>(USABLE_PORTS);
+        private static ushort _listIterator = ushort.MaxValue;
 
         /**
         Gets active TCP connections. Recursive function because properties.GetActiveTcpConnections may throw an
@@ -58,6 +61,45 @@ namespace Protophase.Shared {
             return null;
         }
 
+        private static bool RegenerateAvailablePorts() {
+            // Get all ports that are in use.
+            HashSet<int> activePorts = new HashSet<int>();
+
+            // Get active TCP connections.
+            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
+            TcpConnectionInformation[] connections = GetActiveTcpConnections(properties, MAXTRIES);
+            if(connections == null) return false;
+            activePorts.UnionWith(  from n in connections
+                                    where n.LocalEndPoint.Port >= 1024
+                                    select n.LocalEndPoint.Port
+                                );
+
+            // Get active TCP listners - WCF service listening in TCP.
+            IPEndPoint[] endPoints = properties.GetActiveTcpListeners();
+            activePorts.UnionWith(  from n in endPoints
+                                    where n.Port >= 1024
+                                    select n.Port
+                                );
+
+            // Get active UDP listeners.
+            endPoints = properties.GetActiveUdpListeners();
+            activePorts.UnionWith(  from n in endPoints
+                                    where n.Port >= 1024
+                                    select n.Port
+                                );
+
+            // Generate the list of available ports.
+            _availablePorts.Clear();
+            _availablePorts.Capacity = USABLE_PORTS;
+            for(ushort i = 1024; i <= USABLE_PORTS; ++i) {
+                if(!activePorts.Contains(i))
+                    _availablePorts.Add(i);
+            }
+            _listIterator = 0;
+
+            return true;
+        }
+
         /**
         Searches for the first available TPC/UDP port.
         
@@ -66,35 +108,14 @@ namespace Protophase.Shared {
         @return Available port (>= minimalPort), or 0 if no port is available.
         **/
         public static ushort Find(ushort minimalPort) {
-            List<int> portArray = new List<int>();
-            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
-            
-            // Get active TCP connections
-            TcpConnectionInformation[] connections = GetActiveTcpConnections(properties, MAXTRIES);
-            if(connections == null) return 0;
-            portArray.AddRange(from n in connections
-                               where n.LocalEndPoint.Port >= minimalPort
-                               select n.LocalEndPoint.Port);
+            if(_listIterator > 5000) {
+                lock(_availablePorts) {
+                    if(!RegenerateAvailablePorts()) 
+                        return 0;
+                }
+            }
 
-            // Get active TCP listners - WCF service listening in TCP
-            IPEndPoint[] endPoints = properties.GetActiveTcpListeners();
-            portArray.AddRange(from n in endPoints
-                where n.Port >= minimalPort
-                select n.Port);
-            
-            // Get active UDP listeners
-            endPoints = properties.GetActiveUdpListeners();
-            portArray.AddRange(from n in endPoints
-                where n.Port >= minimalPort
-                select n.Port);
-            
-            portArray.Sort();
-            
-            for(int i = minimalPort; i < UInt16.MaxValue; i++)
-                if(!portArray.Contains(i))
-                    return (ushort)i;
-            
-            return 0;
+            return _availablePorts[_listIterator++];
         }
     }
 }

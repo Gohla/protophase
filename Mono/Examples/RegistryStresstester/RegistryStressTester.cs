@@ -77,7 +77,7 @@ namespace RegistryStresstester
                 DummyService d = new DummyService();
                 _registry.Register(d);
    
-                Thread.Sleep(new Random().Next(50, 200));
+                //Thread.Sleep(new Random().Next(5, 20));
 
                 if (new Random().NextDouble() >= _noUnregisterChance)
                     _registry.Unregister(d);
