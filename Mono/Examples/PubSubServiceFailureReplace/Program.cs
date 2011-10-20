@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using System.Text;
 using System.Threading;
 using Protophase.Service;
@@ -34,7 +35,7 @@ namespace RPCServiceFailureReplace
         static void Main(string[] args)
         {
             Console.CancelKeyPress += CancelKeyPressHandler;
-
+            /*
             //Start the client (subscriber)
             _subClient = new SubClientTest();
             var subClientThread = new Thread(_subClient.Start);
@@ -44,20 +45,20 @@ namespace RPCServiceFailureReplace
             _pubServer = new PubServerTest();
             var rpcServerThread = new Thread(_pubServer.Start);
             rpcServerThread.Start();
-
-            /*
+            */
+            
             var test = new PubSubServiceFailureReplaceTest();
             new Thread(test.Start).Start();
             while (test.Running)
                 Thread.Sleep(100);
-             */
         }
         // Handler for console cancel key presses.
         private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs args)
         {
             args.Cancel = true; // Cancel quitting, do our own quitting.
-            _subClient.Stop();
             _pubServer.StopNeatly();
+            _subClient.Stop();
+            
         }
     }
 
@@ -75,21 +76,29 @@ namespace RPCServiceFailureReplace
             _registry.Register(this);
             int publishCounter = 0;
             DateTime lastTime = DateTime.MinValue;
-            while (!_stop)
+            try
             {
-                if (lastTime.AddSeconds(1) < DateTime.Now) //every second
+                while (!_stop)
                 {
-                    if (PublishedMethod != null)
+                    if (lastTime.AddSeconds(1) < DateTime.Now) //every second
                     {
-                        PublishedMethod("Publising " + DateTime.Now.ToLongTimeString() + " - " + publishCounter.ToString());
-                        publishCounter++;
-                        lastTime = DateTime.Now;
+                        if (PublishedMethod != null)
+                        {
+                            PublishedMethod("Publising " + DateTime.Now.ToLongTimeString() + " - " + publishCounter.ToString());
+                            publishCounter++;
+                            lastTime = DateTime.Now;
+                        }
                     }
+                    Thread.Sleep(Program.WAITMS_Publisher);
+                    _registry.Update();
                 }
-                Thread.Sleep(Program.WAITMS_Publisher);
-                _registry.Update();
+                _registry.Unregister(this);
             }
-            _registry.Unregister(this);
+            catch (Exception e)
+            {
+                //   throw;
+            }
+
         }
 
         public void StopNeatly()
@@ -123,7 +132,7 @@ namespace RPCServiceFailureReplace
     }
 
 
-    /*
+    
     class PubSubServiceFailureReplaceTest
     {
         public PubSubServiceFailureReplaceTest()
@@ -193,7 +202,7 @@ namespace RPCServiceFailureReplace
             _running = false;
         }
     }
-     * */
+     
 
 
 }
