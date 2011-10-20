@@ -7,6 +7,8 @@
 /Mono/Examples/TestServiceServer/obj
 /Mono/Examples/SimpleRPCClient/obj
 /Mono/Examples/SimpleRPCServer/obj
+/Mono/Examples/PubSubServiceFailureReplace/obj
+/Mono/Examples/RPCServiceFailureReplace/obj
 /Mono/Examples/Common/obj
 /Mono/Examples/AisServices/AisDataChecksumStatistics/obj
 /Mono/Examples/AisServices/AisDecoder/obj
