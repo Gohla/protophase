@@ -10,7 +10,6 @@ Dictionary with non unique keys.
 **/
 public class MultiValueDictionary<K, V> : IEnumerable<KeyValuePair<K, V>>
 {
-    // TODO: Use HashSet instead of List?
     private Dictionary<K, List<V>> _dictionary = new Dictionary<K, List<V>>();
 
     /**

@@ -181,14 +181,11 @@ namespace Protophase.Registry {
                         if(_servicesPerApplication.ContainsKey(appID))
                             _servicesPerApplication[appID].Activity = DateTime.Now;
 
-                        //TODO: lookup corresponding client and set an Activity variable to current timestamp
-
                         _rpcSocket.Send();
                         break;
                     }
                     default: {
                         Console.WriteLine("Received unknown message type: " + messageType);
-                        // TODO: Block sender after x unknown message types?
                         _rpcSocket.Send();
                         break;
                     }
