@@ -592,7 +592,8 @@ namespace Protophase.Service {
 
         /**
         Gets a remote service object by UID. This connects to only one service, the service described by the given
-        UID.
+        UID. When this service is added or removed from the registry, the returned Service object will be updated
+        automatically.
         
         @param  uid The UID of the service to get.
         
@@ -604,7 +605,7 @@ namespace Protophase.Service {
 
             ConnectRegistryPublish();
 
-            return new Service(serviceInfo, this, false);
+            return new Service(serviceInfo, this);
         }
 
         /**
@@ -622,7 +623,7 @@ namespace Protophase.Service {
 
             ConnectRegistryPublish();
 
-            return new Service(servicesInfo, this, true);
+            return new Service(servicesInfo, this);
         }
 
 

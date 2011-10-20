@@ -15,13 +15,13 @@ namespace Protophase.Service {
     public class Service : IDisposable {
         private HashSet<ServiceInfo> _servicesInfo = new HashSet<ServiceInfo>();
         private String _serviceType;
+        private String _singleServiceUID;
         private Registry _registry;
         private Socket _rpcSocket;
         private Socket _publishedSocket;
         
         private uint _publishedCounter = 0;
         private event PublishedDelegate _published;
-        private bool _canUpdateServices;
 
         /**
         Event that is called when a message is published for this service.
@@ -42,10 +42,9 @@ namespace Protophase.Service {
         
         @param  serviceInfo         Information describing a remote service.
         @param  registry            The registry this service belongs to.
-        @param  canUpdateServices   Set to true if the services may be updated.
         **/
-        public Service(ServiceInfo serviceInfo, Registry registry, bool canUpdateServices)
-            : this(new ServiceInfo[] { serviceInfo }, registry, canUpdateServices) { }
+        public Service(ServiceInfo serviceInfo, Registry registry)
+            : this(new ServiceInfo[] { serviceInfo }, registry, true) { }
 
         /**
         Construct from multiple service info.
@@ -54,21 +53,34 @@ namespace Protophase.Service {
         
         @param  servicesInfo        Information describing remote services. Services must be of the same type.
         @param  registry            The registry this service belongs to.
-        @param  canUpdateServices   Set to true if the services may be updated.
         **/
-        public Service(ServiceInfo[] servicesInfo, Registry registry, bool canUpdateServices) {
+        public Service(ServiceInfo[] servicesInfo, Registry registry) : this(servicesInfo, registry, false) { }
+
+        /**
+        Construct from multiple service info.
+        
+        @exception  Exception   When not all services are of the same type.
+        
+        @param  servicesInfo        Information describing remote services. Services must be of the same type.
+        @param  registry            The registry this service belongs to.
+        @param  isSingleService     If the given services info should be treated as a single service.
+        **/
+        protected Service(ServiceInfo[] servicesInfo, Registry registry, bool isSingleService) {
             if(servicesInfo.Length != 0) {
                 _serviceType = servicesInfo[0].Type;
-                foreach(ServiceInfo serviceInfo in servicesInfo)
-                {
-                    if(serviceInfo.Type != _serviceType)
-                        throw new System.Exception("All services must be of the same type.");
 
-                    _servicesInfo.Add(serviceInfo);
+                if(!isSingleService) {
+                    foreach(ServiceInfo serviceInfo in servicesInfo) {
+                        if(serviceInfo.Type != _serviceType)
+                            throw new System.Exception("All services must be of the same type.");
+
+                        _servicesInfo.Add(serviceInfo);
+                    }
+                } else {
+                    _singleServiceUID = servicesInfo[0].UID;
                 }
             }
             _registry = registry;
-            _canUpdateServices = canUpdateServices;
 
             Initialize();
             ConnectAll();
@@ -285,8 +297,11 @@ namespace Protophase.Service {
                 may not be updated.
         **/
         public bool AddService(ServiceInfo serviceInfo) {
-            if(serviceInfo.Type != _serviceType || _servicesInfo.Contains(serviceInfo) || !_canUpdateServices) 
+            if(serviceInfo.Type != _serviceType || _servicesInfo.Contains(serviceInfo))
                 return false;
+
+            // If this service object represents a single service, only add it if the given service has the same UID.
+            if(_singleServiceUID != null && serviceInfo.UID != _singleServiceUID) return false;
 
             _servicesInfo.Add(serviceInfo);
             Connect(serviceInfo);
@@ -302,7 +317,8 @@ namespace Protophase.Service {
         @return True if it succeeds, false if given service was not found or if services may not be updated.
         **/
         public bool RemoveService(ServiceInfo serviceInfo) {
-            if(!_canUpdateServices) return false;
+            // If this service object represents a single service, only remove it if the given service has the same UID.
+            if(_singleServiceUID != null && serviceInfo.UID != _singleServiceUID) return false;
 
             if(_servicesInfo.Remove(serviceInfo)) {
                 RecreateSockets();
