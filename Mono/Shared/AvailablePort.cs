@@ -10,22 +10,20 @@ namespace Protophase.Shared {
     Utility class for binding sockets
     **/
     public static class SocketExtension {
-        public static readonly int MAXTRIES = 1000;
+        private static readonly int MAX_TRIES = 1000;
         private static readonly Random _random = new Random();
 
-        private static ushort RandomInitialPort { get { return (ushort)(1024 + _random.Next(0, 1280) * 50); } }
-
-        public static ushort BindAvailablePort(this Socket socket, Transport transport, String address) {
-            ushort port = AvailablePort.Find(RandomInitialPort);
-            int tries = MAXTRIES;
+        public static ushort BindAvailableTCPPort(this Socket socket, String address) {
+            ushort port = AvailablePort.FindTCP();
+            int tries = MAX_TRIES;
 
             // Retry binding socket until it succeeds.
             while(tries > 0) {
                 try {
-                    socket.Bind(transport, address, port);
+                    socket.Bind(Transport.TCP, address, port);
                     break;
                 } catch(ZMQ.Exception) {
-                    port = AvailablePort.Find(RandomInitialPort);
+                    port = AvailablePort.FindTCP();
                     --tries;
                 }
             }
@@ -38,7 +36,8 @@ namespace Protophase.Shared {
     Utility class to find available network ports.
     **/
     public static class AvailablePort {
-        private static readonly int MAXTRIES = 1000;
+        private static readonly int MAX_TRIES = 1000;
+        private static readonly ushort REGENERATE_RATE = 5000;
         private static readonly ushort USABLE_PORTS = ushort.MaxValue - 1024;
         private static readonly List<ushort> _availablePorts = new List<ushort>(USABLE_PORTS);
         private static ushort _listIterator = ushort.MaxValue;
@@ -61,13 +60,18 @@ namespace Protophase.Shared {
             return null;
         }
 
-        private static bool RegenerateAvailablePorts() {
+        /**
+        Regenerates the available port list. Is called automatically when needed.
+        
+        @return True if it succeeds, false if it fails.
+        **/
+        public static bool RegenerateAvailablePorts() {
             // Get all ports that are in use.
             HashSet<int> activePorts = new HashSet<int>();
 
             // Get active TCP connections.
             IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
-            TcpConnectionInformation[] connections = GetActiveTcpConnections(properties, MAXTRIES);
+            TcpConnectionInformation[] connections = GetActiveTcpConnections(properties, MAX_TRIES);
             if(connections == null) return false;
             activePorts.UnionWith(  from n in connections
                                     where n.LocalEndPoint.Port >= 1024
@@ -101,17 +105,18 @@ namespace Protophase.Shared {
         }
 
         /**
-        Searches for the first available TPC/UDP port.
+        Searches for the first available TPC port.
         
-        @param  minimalPort The port number to start searching at.
-        
-        @return Available port (>= minimalPort), or 0 if no port is available.
+        @return Available port, or 0 if no port is available.
         **/
-        public static ushort Find(ushort minimalPort) {
-            if(_listIterator > 5000) {
-                lock(_availablePorts) {
-                    if(!RegenerateAvailablePorts()) 
-                        return 0;
+        public static ushort FindTCP() {
+            // This condition is not really thread safe, but this is OK. We don't want to do a lock every time here yet.
+            if(_listIterator >= REGENERATE_RATE || _listIterator >= _availablePorts.Count) {
+                    lock(_availablePorts) {
+                        // Check again now that we have a lock to prevent multiple regeneration calls.
+                        if(_listIterator >= REGENERATE_RATE || _listIterator >= _availablePorts.Count)
+                            if(!RegenerateAvailablePorts()) 
+                                return 0;
                 }
             }
 

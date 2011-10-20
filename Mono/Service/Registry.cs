@@ -184,7 +184,7 @@ namespace Protophase.Service {
         private ushort BindRPC(String uid) {
             if(!_rpcSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.REP);
-                ushort port = socket.BindAvailablePort(Transport.TCP, "*");
+                ushort port = socket.BindAvailableTCPPort("*");
                 if(port == 0) throw new System.Exception("Could not find an available port to bind on.");
                 _rpcSockets.Add(uid, socket);
                 return port;
@@ -206,7 +206,7 @@ namespace Protophase.Service {
         private ushort BindPublish(String uid) {
             if(!_publishSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.PUB);
-                ushort port = socket.BindAvailablePort(Transport.TCP, "*");
+                ushort port = socket.BindAvailableTCPPort("*");
                 if(port == 0) throw new System.Exception("Could not find an available port to bind on.");
                 _publishSockets.Add(uid, socket);
                 return port;
