@@ -23,10 +23,6 @@ namespace Protophase.Service {
         private event PublishedDelegate _published;
         private bool _canUpdateServices;
 
-        static internal List<Service> _serviceObjects = new List<Service>();
-        static internal MultiValueDictionary<String, Service> _serviceObjectsByType =
-            new MultiValueDictionary<String, Service>();
-
         /**
         Event that is called when a message is published for this service.
         **/
