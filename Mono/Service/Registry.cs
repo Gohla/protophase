@@ -70,22 +70,26 @@ namespace Protophase.Service {
         @param  registryAddress The (remote) address of the registry server in (e.g. 127.0.13.37)
         **/
         public Registry(String registryAddress) : this(new Address(Transport.TCP, registryAddress, 5555),
-            new Address(Transport.TCP, registryAddress, 5556), "localhost", Transport.TCP) { }
+            new Address(Transport.TCP, registryAddress, 5556), "localhost") { }
 
         /**
         Constructor.
+        
+        @exception  Exception   Thrown when RPC and publish addresses have different transports.
         
         @param  rpcAddress      The address of the registry's RPC socket.
         @param  publishAddress  The address of the registry's publish socket.
         @param  remoteAddress   The remote address that is reported to the registry. Only used in TCP, PGM and EPGM
                                 host transports.
-        @param  hostTransport   The transport that will be used to host services.
         **/
-        public Registry(Address rpcAddress, Address publishAddress, String remoteAddress, Transport hostTransport) {
+        public Registry(Address rpcAddress, Address publishAddress, String remoteAddress) {
+            if(rpcAddress.Transport != publishAddress.Transport)
+                throw new Exception("RPC and publish registry addresses cannot have different transports.");
+
             _registryRPCAddress = rpcAddress;
             _registryPublishAddress = publishAddress;
             _remoteAddress = remoteAddress;
-            _hostTransport = hostTransport;
+            _hostTransport = rpcAddress.Transport;
 
             ConnectRegistryRPC();
             RegisterApplication();
@@ -205,7 +209,7 @@ namespace Protophase.Service {
                         address = new Address(_hostTransport, _applicationID + "/" + uid);
                         socket.Connect(address);
                         break;
-                    // TODO: INPROC
+                    // TODO: IPC
                     default:
                         return null;
                 }
