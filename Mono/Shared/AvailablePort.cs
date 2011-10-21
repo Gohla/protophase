@@ -13,14 +13,14 @@ namespace Protophase.Shared {
         private static readonly int MAX_TRIES = 1000;
         private static readonly Random _random = new Random();
 
-        public static ushort BindAvailableTCPPort(this Socket socket, String address) {
+        public static ushort BindAvailableTCPPort(this Socket socket, Transport transport, String address) {
             ushort port = AvailablePort.FindTCP();
             int tries = MAX_TRIES;
 
             // Retry binding socket until it succeeds.
             while(tries > 0) {
                 try {
-                    socket.Bind(Transport.TCP, address, port);
+                    socket.Bind(transport, address, port);
                     break;
                 } catch(ZMQ.Exception) {
                     port = AvailablePort.FindTCP();

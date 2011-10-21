@@ -19,17 +19,18 @@ namespace Protophase.Service {
             new MultiValueDictionary<String, Tuple<PublishedDelegate, EventInfo>>();
         private bool _stopAutoUpdate = false;
 
-        private String _registryAddress;
-        private ushort _registryRPCPort;
-        private ushort _registryPublishPort;
+        private Address _registryRPCAddress;
+        private Address _registryPublishAddress;
         private Socket _registryRPCSocket;
         private Socket _registryPublishSocket;
+
+        private String _remoteAddress;
+        private Transport _hostTransport;
 
         private ulong _applicationID;
         private ulong _uidPrefix = 0;
         private float _pulseTimestep;
         private DateTime _lastPulse = DateTime.MinValue;
-        private String _remoteAddress;
 
         private Dictionary<String, Socket> _rpcSockets = new Dictionary<String, Socket>();
         private Dictionary<String, Socket> _publishSockets = new Dictionary<String, Socket>();
@@ -57,30 +58,35 @@ namespace Protophase.Service {
         public Context Context { get { return _context; } }
 
         /**
-        Default constructor. Connects to localhost registry with default ports.
+        Default constructor. Connects to localhost registry with default ports using the TCP transport. Services are
+        hosted using the TCP transport using localhost as remote address.
         **/
         public Registry() : this("localhost") { }
 
         /**
-        Simple constructor. Connects to registry on given address with default ports.
+        Simple constructor. Connects to registry on given address with default ports using the TCP transport.
+        Services are hosted using the TCP transport using localhost as remote address.
         
         @param  registryAddress The (remote) address of the registry server in (e.g. 127.0.13.37)
         **/
-        public Registry(String registryAddress) : this(registryAddress, 5555, 5556, "localhost") { }
+        public Registry(String registryAddress) : this(new Address(Transport.TCP, registryAddress, 5555),
+            new Address(Transport.TCP, registryAddress, 5556), "localhost", Transport.TCP) { }
 
         /**
         Constructor.
         
-        @param  registryAddress The (remote) address of the registry server in (e.g. 11.33.33.77)
-        @param  rpcPort         The registry server RPC port.
-        @param  publishPort     The registry server publish port.
-        @param  remoteAddress   The remote address that is reported to the registry.
+        @param  rpcAddress      The address of the registry's RPC socket.
+        @param  publishAddress  The address of the registry's publish socket.
+        @param  remoteAddress   The remote address that is reported to the registry. Only used in TCP, PGM and EPGM
+                                host transports.
+        @param  hostTransport   The transport that will be used to host services.
         **/
-        public Registry(String registryAddress, ushort rpcPort, ushort publishPort, String remoteAddress) {
-            _registryAddress = registryAddress;
-            _registryRPCPort = rpcPort;
-            _registryPublishPort = publishPort;
+        public Registry(Address rpcAddress, Address publishAddress, String remoteAddress, Transport hostTransport) {
+            _registryRPCAddress = rpcAddress;
+            _registryPublishAddress = publishAddress;
             _remoteAddress = remoteAddress;
+            _hostTransport = hostTransport;
+
             ConnectRegistryRPC();
             RegisterApplication();
         }
@@ -142,7 +148,7 @@ namespace Protophase.Service {
         private void ConnectRegistryRPC() {
             if(_registryRPCSocket != null) return;
             _registryRPCSocket = _context.Socket(SocketType.REQ);
-            _registryRPCSocket.Connect(Transport.TCP, _registryAddress, _registryRPCPort);
+            _registryRPCSocket.Connect(_registryRPCAddress);
         }
 
         /**
@@ -151,7 +157,7 @@ namespace Protophase.Service {
         private void ConnectRegistryPublish() {
             if(_registryPublishSocket != null) return;
             _registryPublishSocket = _context.Socket(SocketType.SUB);
-            _registryPublishSocket.Connect(Transport.TCP, _registryAddress, _registryPublishPort);
+            _registryPublishSocket.Connect(_registryPublishAddress);
             _registryPublishSocket.Subscribe(new byte[0]);
         }
 
@@ -175,44 +181,80 @@ namespace Protophase.Service {
         /**
         Starts listening for RPC requests for the service with given UID.
         
-        @param  uid The UID of the service.
+        @param  uid         The UID of the service.
         
-        @exception  Exception   Thrown when no available port could be found.
+        @exception  Exception   Thrown when no available port could be found for TCP, PGM or EPGM transports.
         
-        @return The port that is used for listening, or 0 if already listening.
+        @return The address that is used for listening, or null if already listening.
         **/
-        private ushort BindRPC(String uid) {
+        private Address BindRPC(String uid) {
             if(!_rpcSockets.ContainsKey(uid)) {
                 Socket socket = _context.Socket(SocketType.REP);
-                ushort port = socket.BindAvailableTCPPort("*");
-                if(port == 0) throw new System.Exception("Could not find an available port to bind on.");
+                Address address;
+
+                switch(_hostTransport) {
+                    case Transport.TCP:
+                    case Transport.PGM:
+                    case Transport.EPGM:
+                        ushort port = socket.BindAvailableTCPPort(_hostTransport, "*");
+                        if(port == 0) 
+                            throw new System.Exception("Could not find an available port to bind on.");
+                        address = new Address(_hostTransport, _remoteAddress, port);
+                        break;
+                    case Transport.INPROC:
+                        address = new Address(_hostTransport, _applicationID + "/" + uid);
+                        socket.Connect(address);
+                        break;
+                    // TODO: INPROC
+                    default:
+                        return null;
+                }
+                
                 _rpcSockets.Add(uid, socket);
-                return port;
+                return address;
             }
 
-            return 0;
+            return null;
         }
 
         /**
         Starts listening for publish/subscribe requests for the service with given UID. If already listening for that
         service this function will do nothing.
         
-        @param  uid The UID of the service.
+        @param  uid         The UID of the service.
         
-        @exception  Exception   Thrown when no available port could be found.
+        @exception  Exception   Thrown when no available port could be found for TCP, PGM or EPGM transports.
         
-        @return The port that is used for listening, or 0 if already listening.
+        @return The address that is used for listening, or null if already listening.
         **/
-        private ushort BindPublish(String uid) {
+        private Address BindPublish(String uid) {
             if(!_publishSockets.ContainsKey(uid)) {
-                Socket socket = _context.Socket(SocketType.PUB);
-                ushort port = socket.BindAvailableTCPPort("*");
-                if(port == 0) throw new System.Exception("Could not find an available port to bind on.");
+                Socket socket = _context.Socket(SocketType.REP);
+                Address address;
+
+                switch(_hostTransport) {
+                    case Transport.TCP:
+                    case Transport.PGM:
+                    case Transport.EPGM:
+                        ushort port = socket.BindAvailableTCPPort(_hostTransport, "*");
+                        if(port == 0) 
+                            throw new System.Exception("Could not find an available port to bind on.");
+                        address = new Address(_hostTransport, _remoteAddress, port);
+                        break;
+                    case Transport.INPROC:
+                        address = new Address(_hostTransport, _applicationID + "/" + uid);
+                        socket.Connect(address);
+                        break;
+                    // TODO: INPROC
+                    default:
+                        return null;
+                }
+
                 _publishSockets.Add(uid, socket);
-                return port;
+                return address;
             }
 
-            return 0;
+            return null;
         }
 
         /**
@@ -414,11 +456,16 @@ namespace Protophase.Service {
             Type type = typeof(T);
 
             // Bind RPC and publish sockets.
-            ushort rpcPort;
-            ushort publishPort;
+            Address rpcAddress;
+            Address publishAddress;
             try {
-                rpcPort = BindRPC(uid);
-                publishPort = BindPublish(uid);
+                rpcAddress = BindRPC(uid);
+                publishAddress = BindPublish(uid);
+
+                if(rpcAddress == null || publishAddress == null) {
+                    Console.WriteLine("Could not register object: Failed to bind socket.");
+                    return false;
+                }
             } catch (System.Exception e) {
                 Console.WriteLine("Could not register object: " + e.Message);
                 return false;
@@ -450,8 +497,8 @@ namespace Protophase.Service {
                 }
             }
 
-            ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, _remoteAddress, rpcPort,
-                publishPort, rpcMethods);
+            ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, rpcAddress, publishAddress, 
+                rpcMethods);
 
             // Serialize to binary
             MemoryStream stream = new MemoryStream();

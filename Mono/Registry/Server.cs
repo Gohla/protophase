@@ -15,9 +15,8 @@ namespace Protophase.Registry {
         private Context _context = new Context(1);
         private bool _stopAutoUpdate = false;
 
-        private String _remoteAddress;
-        private ushort _rpcPort;
-        private ushort _publishPort;
+        private Address _rpcAddress;
+        private Address _publishAddress;
         private Socket _rpcSocket;
         private Socket _publishSocket;
 
@@ -49,28 +48,27 @@ namespace Protophase.Registry {
         public event IdleEvent Idle;
 
         /**
-        Default constructor. Binds to all addresses using default ports.
+        Default constructor. Using the TCP transport, binds to all addresses using default ports.
         **/
         public Server() : this("*") { }
 
         /**
-        Simple constructor. Binds to given remote address with default ports.
+        Simple constructor. Using the TCP transport, binds to given remote address with default ports.
         
-        @param  remoteAddress   The remote address to listen to. * to bind to all addresses.
+        @param  address   The address to bind on. Use * to bind to all addresses.
         **/
-        public Server(String remoteAddress) : this(remoteAddress, 5555, 5556) { }
+        public Server(String address) : this(new Address(Transport.TCP, address, 5555), 
+            new Address(Transport.TCP, address, 5556)) { }
 
         /**
         Constructor.
         
-        @param  remoteAddress   The remote address to listen to. * to bind to all addresses.
-        @param  rpcPort         The RPC port to bind.
-        @param  publishPort     The publish port to bind.
+        @param  rpcAddress      The RPC address to bind to.
+        @param  publishAddress  The publish address to bind to.
         **/
-        public Server(String remoteAddress, ushort rpcPort, ushort publishPort) {
-            _remoteAddress = remoteAddress;
-            _rpcPort = rpcPort;
-            _publishPort = publishPort;
+        public Server(Address rpcAddress, Address publishAddress) {
+            _rpcAddress = rpcAddress;
+            _publishAddress = publishAddress;
 
             BindRPC();
             BindPublish();
@@ -113,7 +111,7 @@ namespace Protophase.Registry {
         **/
         private void BindRPC() {
             _rpcSocket = _context.Socket(SocketType.REP);
-            _rpcSocket.Bind(Transport.TCP, _remoteAddress, _rpcPort);
+            _rpcSocket.Bind(_rpcAddress);
         }
 
         /**
@@ -121,7 +119,7 @@ namespace Protophase.Registry {
         **/
         private void BindPublish() {
             _publishSocket = _context.Socket(SocketType.PUB);
-            _publishSocket.Bind(Transport.TCP, _remoteAddress, _publishPort);
+            _publishSocket.Bind(_publishAddress);
         }
 
         /**
@@ -275,7 +273,7 @@ namespace Protophase.Registry {
             if (!_knownServers.Any())
             {
                 _serverUid = 1;
-                ServerInfo own = new ServerInfo(_remoteAddress, _rpcPort, _publishPort);
+                ServerInfo own = new ServerInfo("localhost", _rpcAddress.Port, _publishAddress.Port);
                 own.GlobalServerId = _serverUid;
                 _knownServers.Add(own);
             }
@@ -551,14 +549,14 @@ namespace Protophase.Registry {
         public void AddToServerPool(string aMemberAddress, uint aMemberRpcPort, uint aMemberPubPort)
         {
             
-            Console.WriteLine(_rpcPort + " Adding self to remote server...");
-            ServerInfo serverInfo = new ServerInfo("localhost", _rpcPort, _publishPort);
+            Console.WriteLine(_rpcAddress.Port + " Adding self to remote server...");
+            ServerInfo serverInfo = new ServerInfo("localhost", _rpcAddress.Port, _publishAddress.Port);
             Socket newServerConnection = _context.Socket(SocketType.REQ);
             newServerConnection.Connect(Transport.TCP, aMemberAddress, aMemberRpcPort);
             SendData(newServerConnection, RegistryMessageType.RequestServerUid, serverInfo);
             byte[] message = newServerConnection.Recv();
 
-            Console.WriteLine(_rpcPort + " Receiving request to join pool message...");
+            Console.WriteLine(_rpcAddress.Port + " Receiving request to join pool message...");
             MemoryStream receiveStream = new MemoryStream(message);
             _serverUid = StreamUtil.Read<long>(receiveStream);
             var remoteKnownServers = StreamUtil.Read<List<ServerInfo>>(receiveStream);
@@ -574,7 +572,7 @@ namespace Protophase.Registry {
             foreach (var x in _knownServers)
                 s += x._pubPort + ", ";
             s += "}";
-            Console.WriteLine(_rpcPort + " : " + s);
+            Console.WriteLine(_rpcAddress.Port + " : " + s);
         }
     }
 }

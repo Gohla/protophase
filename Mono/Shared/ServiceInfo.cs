@@ -12,31 +12,28 @@ namespace Protophase.Shared {
         /**
         Constructor.
         
-        @param  uid         The UID.
-        @param  type        The service type.
-        @param  version     The service version.
-        @param  address     The remote address.
-        @param  rpcPort     The RPC listening port.
-        @param  publishPort The publish/subscribe listening port.
-        @param  rpcMethods  The available RPC methods.
+        @param  uid             The UID.
+        @param  type            The service type.
+        @param  version         The service version.
+        @param  rpcAddress      The remote RPC address.
+        @param  publishAddress  The remote publish address.
+        @param  rpcMethods      The available RPC methods.
         **/
-        public ServiceInfo(String uid, String type, String version, String address, ushort rpcPort, ushort publishPort,
-                           List<String> rpcMethods) {
+        public ServiceInfo(String uid, String type, String version, Address rpcAddress, Address publishAddress, 
+            List<String> rpcMethods) {
             UID = uid;
             Type = type;
             Version = version;
-            Address = address;
-            RPCPort = rpcPort;
-            PublishPort = publishPort;
+            RPCAddress = rpcAddress;
+            PublishAddress = publishAddress;
             RPCMethods = rpcMethods;
         }
 
         public String UID;
         public String Type;
         public String Version;
-        public String Address;
-        public ushort RPCPort;
-        public ushort PublishPort;
+        public Address RPCAddress;
+        public Address PublishAddress;
         public List<String> RPCMethods;
 
         /**
@@ -66,7 +63,7 @@ namespace Protophase.Shared {
         @return A string representation of this object.
         **/
         public override String ToString() {
-            return UID + ", " + Type + ", " + Version + ", " + Address + ", " + RPCPort + ", " + PublishPort +
+            return UID + ", " + Type + ", " + Version + ", " + RPCAddress + ", " + PublishAddress + ", " +
                 ", RPC methods: [" + String.Join(", ", RPCMethods.ToArray()) + "]";
         }
     }

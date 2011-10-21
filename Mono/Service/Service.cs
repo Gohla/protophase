@@ -130,8 +130,8 @@ namespace Protophase.Service {
         @param  serviceInfo The service info.
         **/
         private void Connect(ServiceInfo serviceInfo) {
-            _rpcSocket.Connect(Transport.TCP, serviceInfo.Address, serviceInfo.RPCPort);
-            _publishedSocket.Connect(Transport.TCP, serviceInfo.Address, serviceInfo.PublishPort);
+            _rpcSocket.Connect(serviceInfo.RPCAddress);
+            _publishedSocket.Connect(serviceInfo.PublishAddress);
         }
 
         /**

@@ -57,10 +57,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Address.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="MultiMap.cs" />
     <Compile Include="RegistryPublishType.cs" />
     <Compile Include="ServiceInfo.cs" />
+    <Compile Include="SharedContext.cs" />
     <Compile Include="StreamUtil.cs" />
     <Compile Include="RegistryMessageType.cs" />
     <Compile Include="AvailablePort.cs" />
