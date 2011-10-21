@@ -67,19 +67,17 @@ namespace Protophase.Shared {
             _address = address;
 
             // Derive the transport type.
-            if(_transport != 0) {
+            if(_transport == 0) {
                 // TODO: Check existence.
                 int transportPos = _address.IndexOf("://");
                 String protocolName = _address.Substring(0, transportPos);
-                Console.WriteLine(protocolName);
                 _transport = (Transport)Enum.Parse(typeof(Transport), protocolName, true);
             }
 
             // Derive port
             if(_port == 0 && UsesPorts()) {
                 // TODO: Check existence.
-                int portPos = _address.LastIndexOf(':');
-                Console.WriteLine(_address.Substring(portPos));
+                int portPos = _address.LastIndexOf(':') + 1;
                 _port = ushort.Parse(_address.Substring(portPos));
             }
         }

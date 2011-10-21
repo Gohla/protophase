@@ -12,7 +12,7 @@ namespace Protophase.Registry {
     Registry server that keeps a registry of existing objects.
     **/
     public class Server : IDisposable {
-        private Context _context = new Context(1);
+        private Context _context;
         private bool _stopAutoUpdate = false;
 
         private Address _rpcAddress;
@@ -67,6 +67,8 @@ namespace Protophase.Registry {
         @param  publishAddress  The publish address to bind to.
         **/
         public Server(Address rpcAddress, Address publishAddress) {
+            _context = SharedContext.Get();
+
             _rpcAddress = rpcAddress;
             _publishAddress = publishAddress;
 
@@ -84,8 +86,7 @@ namespace Protophase.Registry {
         /**
         Dispose of this object, unregisters all services and cleans up any resources it uses.
         **/
-        public void Dispose()
-        {
+        public void Dispose() {
             Dispose(false);
         }
 
@@ -100,10 +101,11 @@ namespace Protophase.Registry {
                 // Dispose context and sockets.
                 _rpcSocket.Dispose();
                 _publishSocket.Dispose();
-                _context.Dispose();
 
                 GC.SuppressFinalize(this);
             }
+
+            SharedContext.Dispose();
         }
 
         /**

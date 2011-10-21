@@ -12,7 +12,7 @@ namespace Protophase.Service {
     Registry client that handles all communication with a registry server.
     **/
     public class Registry : IDisposable {
-        private Context _context = new Context(1);
+        private Context _context;
         private Dictionary<String, object> _objects = new Dictionary<String, object>();
         private Dictionary<object, String> _objectsReverse = new Dictionary<object, String>();
         private MultiValueDictionary<String, Tuple<PublishedDelegate, EventInfo>> _publishedDelegates =
@@ -86,6 +86,8 @@ namespace Protophase.Service {
             if(rpcAddress.Transport != publishAddress.Transport)
                 throw new Exception("RPC and publish registry addresses cannot have different transports.");
 
+            _context = SharedContext.Get();
+
             _registryRPCAddress = rpcAddress;
             _registryPublishAddress = publishAddress;
             _remoteAddress = remoteAddress;
@@ -124,10 +126,11 @@ namespace Protophase.Service {
                 // Dispose context and sockets.
                 _registryRPCSocket.Dispose();
                 if(_registryPublishSocket != null) _registryPublishSocket.Dispose();
-                _context.Dispose();
 
                 GC.SuppressFinalize(this);
             }
+
+            SharedContext.Dispose();
         }
 
         /**
@@ -206,12 +209,11 @@ namespace Protophase.Service {
                         address = new Address(_hostTransport, _remoteAddress, port);
                         break;
                     case Transport.INPROC:
-                        address = new Address(_hostTransport, _applicationID + "/" + uid);
-                        socket.Connect(address);
+                        address = new Address(_hostTransport, uid + "/RPC");
+                        socket.Bind(address);
                         break;
-                    // TODO: IPC
                     default:
-                        return null;
+                        throw new Exception("Unsupported transport: " + Enum.GetName(typeof(Transport), _hostTransport));
                 }
                 
                 _rpcSockets.Add(uid, socket);
@@ -246,12 +248,11 @@ namespace Protophase.Service {
                         address = new Address(_hostTransport, _remoteAddress, port);
                         break;
                     case Transport.INPROC:
-                        address = new Address(_hostTransport, _applicationID + "/" + uid);
-                        socket.Connect(address);
+                        address = new Address(_hostTransport, uid + "/Publish");
+                        socket.Bind(address);
                         break;
-                    // TODO: INPROC
                     default:
-                        return null;
+                        throw new Exception("Unsupported transport: " + Enum.GetName(typeof(Transport), _hostTransport));
                 }
 
                 _publishSockets.Add(uid, socket);
