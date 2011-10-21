@@ -61,6 +61,7 @@
     <Compile Include="Main.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Server.cs" />
+    <Compile Include="ServerInfo.cs" />
     <Compile Include="ServiceUidHolder.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

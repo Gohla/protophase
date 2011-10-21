@@ -58,6 +58,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RPCServiceFailureReplace", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RegistryStresstester", "Examples\RegistryStresstester\RegistryStresstester.csproj", "{155E20C8-49A7-4406-A2DA-045CE57F15FE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RegistryFailureTest", "Examples\RegistryFailureTest\RegistryFailureTest.csproj", "{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -268,6 +270,16 @@ Global
 		{155E20C8-49A7-4406-A2DA-045CE57F15FE}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{155E20C8-49A7-4406-A2DA-045CE57F15FE}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{155E20C8-49A7-4406-A2DA-045CE57F15FE}.Release|x86.ActiveCfg = Release|Any CPU
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}.Debug|x86.ActiveCfg = Debug|x86
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}.Debug|x86.Build.0 = Debug|x86
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}.Release|Any CPU.ActiveCfg = Release|x86
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}.Release|Mixed Platforms.Build.0 = Release|x86
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}.Release|x86.ActiveCfg = Release|x86
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -297,6 +309,7 @@ Global
 		{3A834019-4B64-400B-80BA-37FA45AA4160} = {676AEDA9-DD73-4982-BFE1-E3942E356F54}
 		{6C3AF5BB-CA22-4220-BEE0-E9526EAD39E2} = {676AEDA9-DD73-4982-BFE1-E3942E356F54}
 		{155E20C8-49A7-4406-A2DA-045CE57F15FE} = {676AEDA9-DD73-4982-BFE1-E3942E356F54}
+		{7E452DCF-0E9E-4CA0-821A-A44B6EFFDF98} = {676AEDA9-DD73-4982-BFE1-E3942E356F54}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItems = $0

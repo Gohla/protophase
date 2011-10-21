@@ -8,6 +8,8 @@ namespace Protophase.Shared {
         UnregisterService,
         FindByUID,
         FindByType,
-        Pulse
+        Pulse,
+        RequestServerUid,
+        ReserveServerUid
     }
 }
