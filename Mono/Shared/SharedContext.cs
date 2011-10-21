@@ -33,7 +33,7 @@ namespace Protophase.Shared
         **/
         public static void Dispose() {
             lock(_lock) {
-                Debug.Assert(_count == 0, "Trying to dispose of the shared context while it is already disposed.");
+                Debug.Assert(_count != 0, "Trying to dispose of the shared context while it is already disposed.");
                 if(--_count == 0) {
                     _sharedContext.Dispose();
                     _sharedContext = null;
