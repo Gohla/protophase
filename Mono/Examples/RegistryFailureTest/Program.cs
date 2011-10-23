@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Protophase.Registry;
+using Protophase.Shared;
+using ZMQ;
 
 namespace RegistryFailureTest
 {
@@ -68,11 +70,11 @@ namespace RegistryFailureTest
 
         public void Start()
         {
-            _registryServer = new Server("*", _portRpc, _portPub);
+            _registryServer = new Server(new Address(Transport.TCP, "*", _portRpc), new Address(Transport.TCP, "*", _portPub));
             while (!_stop)
             {
-                if (count % 1000 == 00)
-                    _registryServer.DumpServerPool();
+                //if (count % 1000 == 00)
+                  //  _registryServer.DumpServerPool();
                 if (_connectRpc > 0 && count == 2000)
                     _registryServer.AddToServerPool("localhost", _connectRpc, _connectPub);
                 count++;

@@ -1,4 +1,5 @@
 using System;
+using Protophase.Shared;
 
 namespace Protophase.Registry
 {
@@ -6,14 +7,12 @@ namespace Protophase.Registry
     public class ServerInfo : IEquatable<ServerInfo>
     {
         private long _globalServerId = 0;
-        public String _address;
-        public uint _rpcPort;
-        public uint _pubPort;
-        public ServerInfo(string address, uint rpcPort, uint pubPort)
+        public Address _rpcAddress;
+        public Address _pubAddress;
+        public ServerInfo(Address rpcAddress, Address pubAddress)
         {
-            _address = address;
-            _rpcPort = rpcPort;
-            _pubPort = pubPort;
+            _rpcAddress = rpcAddress;
+            _pubAddress = pubAddress;
         }
         public long GlobalServerId
         {
