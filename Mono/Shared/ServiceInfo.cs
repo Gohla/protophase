@@ -63,8 +63,8 @@ namespace Protophase.Shared {
         @return A string representation of this object.
         **/
         public override String ToString() {
-            return UID + ", " + Type + ", " + Version + ", " + RPCAddress + ", " + PublishAddress + ", " +
-                ", RPC methods: [" + String.Join(", ", RPCMethods.ToArray()) + "]";
+            return UID + ", " + Type + ", " + Version + ", " + RPCAddress + ", " + PublishAddress +
+                ", [" + String.Join(", ", RPCMethods.ToArray()) + "]";
         }
     }
 }

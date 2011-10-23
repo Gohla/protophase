@@ -12,7 +12,7 @@ namespace Protophase.Service {
     Registry client that handles all communication with a registry server.
     **/
     public class Registry : IDisposable {
-        private Context _context = new Context(1);
+        private Context _context;
         private Dictionary<String, object> _objects = new Dictionary<String, object>();
         private Dictionary<object, String> _objectsReverse = new Dictionary<object, String>();
         private MultiValueDictionary<String, Tuple<PublishedDelegate, EventInfo>> _publishedDelegates =
@@ -70,22 +70,28 @@ namespace Protophase.Service {
         @param  registryAddress The (remote) address of the registry server in (e.g. 127.0.13.37)
         **/
         public Registry(String registryAddress) : this(new Address(Transport.TCP, registryAddress, 5555),
-            new Address(Transport.TCP, registryAddress, 5556), "localhost", Transport.TCP) { }
+            new Address(Transport.TCP, registryAddress, 5556), "localhost") { }
 
         /**
         Constructor.
+        
+        @exception  Exception   Thrown when RPC and publish addresses have different transports.
         
         @param  rpcAddress      The address of the registry's RPC socket.
         @param  publishAddress  The address of the registry's publish socket.
         @param  remoteAddress   The remote address that is reported to the registry. Only used in TCP, PGM and EPGM
                                 host transports.
-        @param  hostTransport   The transport that will be used to host services.
         **/
-        public Registry(Address rpcAddress, Address publishAddress, String remoteAddress, Transport hostTransport) {
+        public Registry(Address rpcAddress, Address publishAddress, String remoteAddress) {
+            if(rpcAddress.Transport != publishAddress.Transport)
+                throw new Exception("RPC and publish registry addresses cannot have different transports.");
+
+            _context = SharedContext.Get();
+
             _registryRPCAddress = rpcAddress;
             _registryPublishAddress = publishAddress;
             _remoteAddress = remoteAddress;
-            _hostTransport = hostTransport;
+            _hostTransport = rpcAddress.Transport;
 
             ConnectRegistryRPC();
             RegisterApplication();
@@ -120,10 +126,11 @@ namespace Protophase.Service {
                 // Dispose context and sockets.
                 _registryRPCSocket.Dispose();
                 if(_registryPublishSocket != null) _registryPublishSocket.Dispose();
-                _context.Dispose();
 
                 GC.SuppressFinalize(this);
             }
+
+            SharedContext.Dispose();
         }
 
         /**
@@ -202,12 +209,11 @@ namespace Protophase.Service {
                         address = new Address(_hostTransport, _remoteAddress, port);
                         break;
                     case Transport.INPROC:
-                        address = new Address(_hostTransport, _applicationID + "/" + uid);
-                        socket.Connect(address);
+                        address = new Address(_hostTransport, uid + "/RPC");
+                        socket.Bind(address);
                         break;
-                    // TODO: INPROC
                     default:
-                        return null;
+                        throw new Exception("Unsupported transport: " + Enum.GetName(typeof(Transport), _hostTransport));
                 }
                 
                 _rpcSockets.Add(uid, socket);
@@ -242,12 +248,11 @@ namespace Protophase.Service {
                         address = new Address(_hostTransport, _remoteAddress, port);
                         break;
                     case Transport.INPROC:
-                        address = new Address(_hostTransport, _applicationID + "/" + uid);
-                        socket.Connect(address);
+                        address = new Address(_hostTransport, uid + "/Publish");
+                        socket.Bind(address);
                         break;
-                    // TODO: INPROC
                     default:
-                        return null;
+                        throw new Exception("Unsupported transport: " + Enum.GetName(typeof(Transport), _hostTransport));
                 }
 
                 _publishSockets.Add(uid, socket);
