@@ -4,6 +4,10 @@
     **/
     public enum RegistryPublishType {
         ServiceRegistered,
-        ServiceUnregistered
+        ServiceUnregistered,
+        ServicePulse,
+        ServerPoolMessage,
+        AlternateRegistryAvailable,
+        AlternateRegistryUnAvailable
     }
 }

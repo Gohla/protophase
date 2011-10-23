@@ -4,6 +4,7 @@ using Protophase.Shared;
 
 namespace Protophase.Registry
 {
+    [Serializable]
     public class ServiceUidHolder
     {
         private DateTime _activity;

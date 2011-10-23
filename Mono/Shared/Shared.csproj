@@ -58,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Address.cs" />
+    <Compile Include="AlternateRegistryServer.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="MultiMap.cs" />
     <Compile Include="RegistryPublishType.cs" />

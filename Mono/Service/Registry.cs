@@ -5,6 +5,7 @@ using System.Reflection;
 using Protophase.Shared;
 using ZMQ;
 using System.Threading;
+using System.Linq;
 using Exception = System.Exception;
 
 namespace Protophase.Service {
@@ -19,8 +20,12 @@ namespace Protophase.Service {
             new MultiValueDictionary<String, Tuple<PublishedDelegate, EventInfo>>();
         private bool _stopAutoUpdate = false;
 
+        private List<AlternateRegistryServer> _serverAlternatives = new List<AlternateRegistryServer>();
+        private long _serverID;
+
         private Address _registryRPCAddress;
         private Address _registryPublishAddress;
+
         private Socket _registryRPCSocket;
         private Socket _registryPublishSocket;
 
@@ -94,6 +99,7 @@ namespace Protophase.Service {
             _hostTransport = rpcAddress.Transport;
 
             ConnectRegistryRPC();
+            ConnectRegistryPublish();
             RegisterApplication();
         }
 
@@ -176,13 +182,14 @@ namespace Protophase.Service {
             MemoryStream stream = new MemoryStream();
             // Write message type
             stream.WriteByte((byte)RegistryMessageType.RegisterApplication);
-
             // Send to registry and await results.
             _registryRPCSocket.Send(stream.GetBuffer());
             byte[] message = _registryRPCSocket.Recv();
             MemoryStream receiveStream = new MemoryStream(message);
             _applicationID = StreamUtil.Read<ulong>(receiveStream);
             _pulseTimestep = StreamUtil.Read<float>(receiveStream) / REGISTRY_TIMEOUT_DIVIDER;
+            _serverAlternatives = StreamUtil.Read<List<AlternateRegistryServer>>(receiveStream);
+            _serverID = StreamUtil.Read<long>(receiveStream);
         }
 
         /**
@@ -283,8 +290,20 @@ namespace Protophase.Service {
                         ServiceUnregistered(StreamUtil.Read<ServiceInfo>(stream));
                         break;
                     }
+                    case RegistryPublishType.AlternateRegistryAvailable:
+                        AlternateRegistryServer alt = StreamUtil.Read<AlternateRegistryServer>(stream);
+                        if (!_serverAlternatives.Where(x=>(x.ServerID == alt.ServerID)).Any())
+                            _serverAlternatives.Add(alt);
+                        break;
+                    case RegistryPublishType.AlternateRegistryUnAvailable:
+                        long serverId = StreamUtil.Read<long>(stream);
+                        AlternateRegistryServer remove = null;
+                        if (_serverAlternatives.Where(x => (x.ServerID == serverId)).Any())
+                            remove = _serverAlternatives.Where(x => (x.ServerID == serverId)).Single();
+                        if (remove != null)
+                            _serverAlternatives.Remove(remove);
+                        break;
                 }
-
                 // Try to get more messages.
                 message = _registryPublishSocket.Recv(SendRecvOpt.NOBLOCK);
             }
@@ -388,9 +407,34 @@ namespace Protophase.Service {
                 StreamUtil.Write(stream, _applicationID);
 
                 // Send to registry and await results.
-                _registryRPCSocket.Send(stream.GetBuffer());
-                _registryRPCSocket.Recv();
+                try
+                {
+                    _registryRPCSocket.Send(stream.GetBuffer());
+                    _registryRPCSocket.Recv(1000);
+                }
+                catch (ZMQ.Exception e)
+                {
+                    Console.WriteLine("Error in registry connection: " + e.Errno + ": " + e.Message);
+                    if (e.Errno == 156384763)
+                    {
+                        if (_serverAlternatives.Count <= 1)
+                            throw new Exception("Connection with registry failed without any alternitives present.");
+                        else
+                        {
+                            AlternateRegistryServer alt = _serverAlternatives.Where(x => (x.ServerID != _serverID)).First();
+                            _serverID = alt.ServerID;
+                            _registryRPCAddress = alt.ServerRPCAddress;
+                            _registryPublishAddress = alt.ServerPubAddress;
+                            _registryRPCSocket = _context.Socket(SocketType.REQ);
+                            _registryRPCSocket.Connect(_registryRPCAddress);
+                            _registryPublishSocket = _context.Socket(SocketType.SUB);
+                            _registryPublishSocket.Connect(_registryPublishAddress);
+                            _registryPublishSocket.Subscribe(new byte[0]);
+                            Console.WriteLine("Failing registry detected. Transitioned to alternate registry server. New server id: " + _serverID);
+                        }
 
+                    }
+                }
                 _lastPulse = DateTime.Now;
             }
         }
@@ -662,9 +706,6 @@ namespace Protophase.Service {
         public Service GetServiceByUID(String uid) {
             ServiceInfo serviceInfo = FindByUID(uid);
             if(serviceInfo == null) return null;
-
-            ConnectRegistryPublish();
-
             return new Service(serviceInfo, this);
         }
 
@@ -680,9 +721,6 @@ namespace Protophase.Service {
         public Service GetServiceByType(String type) {
             ServiceInfo[] servicesInfo = FindByType(type);
             if(servicesInfo == null) return null;
-
-            ConnectRegistryPublish();
-
             return new Service(servicesInfo, this);
         }
 

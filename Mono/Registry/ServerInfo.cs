@@ -7,12 +7,14 @@ namespace Protophase.Registry
     public class ServerInfo : IEquatable<ServerInfo>
     {
         private long _globalServerId = 0;
-        public Address _rpcAddress;
-        public Address _pubAddress;
-        public ServerInfo(Address rpcAddress, Address pubAddress)
+        public Address _rpcRemotelyAccessibleAddress;
+        public Address _pubRemotelyAccessibleAddress;
+        public DateTime Activity { get; set; }
+        public ServerInfo(Address rpcRemotelyAccessibleAddress, Address pubRemotelyAccessibleAddress)
         {
-            _rpcAddress = rpcAddress;
-            _pubAddress = pubAddress;
+            _rpcRemotelyAccessibleAddress = rpcRemotelyAccessibleAddress;
+            _pubRemotelyAccessibleAddress = pubRemotelyAccessibleAddress;
+            Activity = DateTime.Now;
         }
         public long GlobalServerId
         {
@@ -25,7 +27,6 @@ namespace Protophase.Registry
                     throw new Exception("Can only assign a server id once.");
             }
         }
-
         public bool Equals(ServerInfo other)
         {
             return other.GlobalServerId == _globalServerId;

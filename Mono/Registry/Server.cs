@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Threading;
 using Protophase.Registry;
+using Protophase.Service;
 using Protophase.Shared;
 using System.Linq;
 using ZMQ;
@@ -22,13 +23,12 @@ namespace Protophase.Registry {
         private Socket _publishSocket;
 
         private Dictionary<String, ServiceInfo> _servicesByUID = new Dictionary<String, ServiceInfo>();
-        private Dictionary<String, Dictionary<String, ServiceInfo>> _servicesByType =
-            new Dictionary<String, Dictionary<String, ServiceInfo>>();
-
+        private Dictionary<String, Dictionary<String, ServiceInfo>> _servicesByType = new Dictionary<String, Dictionary<String, ServiceInfo>>();
         private Dictionary<ulong, ServiceUidHolder> _servicesPerApplication = new Dictionary<ulong, ServiceUidHolder>();
+
         private ulong _nextApplicationID = 0;
 
-        private static readonly float SERVICE_TIMEOUT = 5.0f;
+        private static readonly float SERVICE_TIMEOUT = 20.0f; //It is wise keeping this above the sync interval 
 
         /**
         Delegate for the idle event.
@@ -133,10 +133,12 @@ namespace Protophase.Registry {
                 switch(messageType) {
                     case RegistryMessageType.RegisterApplication: {
                         MemoryStream sendStream = new MemoryStream();
+                        //TODO: make sure the applicationID is unique throughout the server pool
                         StreamUtil.Write(sendStream, _nextApplicationID++);
                         StreamUtil.Write(sendStream, SERVICE_TIMEOUT);
+                        StreamUtil.Write(sendStream, AlternateRegistries());
+                        StreamUtil.Write(sendStream, _serverUid);
                         _rpcSocket.Send(sendStream.GetBuffer());
-
                         break;
                     }
                     case RegistryMessageType.RegisterService: {
@@ -180,57 +182,26 @@ namespace Protophase.Registry {
                     }
                     case RegistryMessageType.Pulse: {
                         ulong appID = StreamUtil.Read<ulong>(stream);
-                        if(_servicesPerApplication.ContainsKey(appID))
-                            _servicesPerApplication[appID].Activity = DateTime.Now;
-
+                        ApplicationPulseReceived(appID);
                         _rpcSocket.Send();
                         break;
                     }
-
-                    //Registry to Registry communications
-
-                    case RegistryMessageType.RequestServerUid:
+                    case RegistryMessageType.ServerPoolMessage:
                     {
-                        MemoryStream sendStream = new MemoryStream();
-                        long newUid = NewServerUIDInPool();
-                        StreamUtil.Write(sendStream, newUid);
-                        StreamUtil.Write(sendStream, _knownServers);
-                        StreamUtil.Write(sendStream, _serverUid);
-                        //TODO add rest of initial stuff. - Might be nice to do this in a struct so a Periodical Synch method can also use it.
-                        _rpcSocket.Send(sendStream.GetBuffer());
+                        ReceiveServerPoolMessage(stream);
                         break;
                     }
-                    case RegistryMessageType.ReserveServerUid:
-                    {
-                        long proposal = StreamUtil.Read<long>(stream);
-                        bool ok = true;
-                        if (_knownServers.Where(x => (x.GlobalServerId == proposal)).Any() || _reservedUids.Contains(proposal))
-                            ok = false;
-                        MemoryStream sendStream = new MemoryStream();
-                        StreamUtil.Write(sendStream, ok);
-                        _rpcSocket.Send(sendStream.GetBuffer());
-                    }
-                    break;
-                    case RegistryMessageType.ServerAdded:
-                    {
-
-
-                    }
-                    break;
-
-
-
                     default: {
                         Console.WriteLine("Received unknown message type: " + messageType);
                         _rpcSocket.Send();
                         break;
                     }
                 }
-
                 // Try to get more messages.
                 message = _rpcSocket.Recv(SendRecvOpt.NOBLOCK);
             }
         }
+
 
         /**
         Removes services from timed out applications.
@@ -260,8 +231,9 @@ namespace Protophase.Registry {
         **/
         public void Update() {
             Receive();
+            RecieveSubscribed();
             RemoveTimedOutServices();
-            SyncServers();
+            ManageServerPool();
         }
 
 

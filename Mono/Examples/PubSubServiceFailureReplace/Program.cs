@@ -30,24 +30,10 @@ namespace RPCServiceFailureReplace
         public static readonly int WAITMS_Publisher = 1; //No sleep in publisher SEEMS to work without problems.
         public static readonly int WAITMS_Subscriber = 1;
 
-        private static SubClientTest _subClient;
-        private static PubServerTest _pubServer;
 
         static void Main(string[] args)
         {
             Console.CancelKeyPress += CancelKeyPressHandler;
-            /*
-            //Start the client (subscriber)
-            _subClient = new SubClientTest();
-            var subClientThread = new Thread(_subClient.Start);
-            subClientThread.Start();
-            
-            //Start the server (publisher)
-            _pubServer = new PubServerTest();
-            var rpcServerThread = new Thread(_pubServer.Start);
-            rpcServerThread.Start();
-            */
-            
             var test = new PubSubServiceFailureReplaceTest();
             new Thread(test.Start).Start();
             while (test.Running)
@@ -57,9 +43,6 @@ namespace RPCServiceFailureReplace
         private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs args)
         {
             args.Cancel = true; // Cancel quitting, do our own quitting.
-            _pubServer.StopNeatly();
-            _subClient.Stop();
-            
         }
     }
 
@@ -95,7 +78,7 @@ namespace RPCServiceFailureReplace
                 }
                 _registry.Unregister(this);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //   throw;
             }

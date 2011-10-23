@@ -9,8 +9,6 @@ namespace Protophase.Shared {
         FindByUID,
         FindByType,
         Pulse,
-        RequestServerUid,
-        ReserveServerUid,
-        ServerAdded
+        ServerPoolMessage
     }
 }
