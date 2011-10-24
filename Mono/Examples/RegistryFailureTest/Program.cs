@@ -34,21 +34,19 @@ namespace RegistryFailureTest
             var serviceThread2 = new Thread(c2.Start);
 
             t1.Start();
+            t2.Start();
+            Thread.Sleep(10000);
             serviceThread1.Start();
             serviceThread2.Start();
-            t2.Start();
-            Thread.Sleep(1000);
-            t3.Start();
             Thread.Sleep(5000);
-            //t1.Interrupt();
-            Thread.Sleep(10000);
-            //t2.Interrupt();
+            //c1._stop = true;
+            t3.Start();
             t4.Start();
             Thread.Sleep(10000);
             t1.Interrupt();
             t2.Interrupt();
             t3.Interrupt();
-
+            
 
             while (!_stop)
                 Thread.Sleep(1);
@@ -64,7 +62,7 @@ namespace RegistryFailureTest
     class RegistryClient
     {
         private Registry _registry;
-        private bool _stop;
+        public bool _stop;
         [Publisher]
         public event PublishedDelegate TestMethod;
         public void Start()

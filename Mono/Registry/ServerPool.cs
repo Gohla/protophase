@@ -6,6 +6,7 @@ using System.Text;
 using Protophase.Service;
 using Protophase.Shared;
 using ZMQ;
+using Exception = System.Exception;
 
 namespace Protophase.Registry
 {
@@ -21,6 +22,9 @@ namespace Protophase.Registry
         private List<ServerInfo> _knownServers = new List<ServerInfo>();
         private Dictionary<long, Socket> _serverRpcSockets = new Dictionary<long, Socket>();
         private Dictionary<long, Socket> _serverPubSockets = new Dictionary<long, Socket>();
+
+
+
         private DateTime _lastSync = DateTime.Now;
         private DateTime _lastPulse = DateTime.Now;
         private const int SERVER_TIMEOUT = 5;
@@ -38,10 +42,18 @@ namespace Protophase.Registry
                     {
                         Address myPublicRpcAddress = StreamUtil.Read<Address>(stream);
                         Address myPublicPubAddress = StreamUtil.Read<Address>(stream);
-                        MemoryStream sendStream = new MemoryStream();
+
                         long newUid = NewServerUIDInPool(myPublicRpcAddress, myPublicPubAddress);
+                        SyncMessage thisDataSyncMessage = new SyncMessage();
+                        thisDataSyncMessage.KnownServers = _knownServers;
+                        thisDataSyncMessage.ServerId = _serverUid;
+                        thisDataSyncMessage.ServicesByType = _servicesByType;
+                        thisDataSyncMessage.ServicesByUid = _servicesByUID;
+                        thisDataSyncMessage.ServicesPerApplication = _servicesPerApplication;
+
+                        MemoryStream sendStream = new MemoryStream();
                         StreamUtil.Write(sendStream, newUid);
-                        StreamUtil.Write(sendStream, _knownServers);
+                        StreamUtil.Write(sendStream, thisDataSyncMessage);
                         _rpcSocket.Send(sendStream.GetBuffer());
                     }
                     break;
@@ -102,19 +114,20 @@ namespace Protophase.Registry
             //Receive unique ID
             _serverUid = StreamUtil.Read<long>(receiveStream);
             //Receive remote known servers list
-            var remoteKnownServers = StreamUtil.Read<List<ServerInfo>>(receiveStream);
+            SyncMessage syncMessage = StreamUtil.Read<SyncMessage>(receiveStream);
 
             ServerInfo thisNewPoolMember = new ServerInfo(ownPublicallyAccessibleRPCAddress, ownPublicallyAccessiblePubAddress);
             thisNewPoolMember.GlobalServerId = _serverUid;
 
-            foreach (var remoteServer in remoteKnownServers)
+            foreach (var remoteServer in syncMessage.KnownServers)
             {
                 AddServerToServerPool(remoteServer);
                 SendServerPoolMessage(_serverRpcSockets[remoteServer.GlobalServerId], ServerPoolMessageRPC.AddServer, thisNewPoolMember);
                 _serverRpcSockets[remoteServer.GlobalServerId].Recv();
             }
             //Finally add self to known servers.
-            _knownServers.Add(thisNewPoolMember); 
+            _knownServers.Add(thisNewPoolMember);
+            Synchronize(syncMessage);
         }
 
 
@@ -125,6 +138,8 @@ namespace Protophase.Registry
          */
         private void AddServerToServerPool(ServerInfo si)
         {
+            if  (si.GlobalServerId == _serverUid)
+                throw new Exception("Cannot use AddServerToServerPool on self");
             Socket newServerConnectionRPC = _context.Socket(SocketType.REQ);
             newServerConnectionRPC.Connect(si._rpcRemotelyAccessibleAddress);
             _serverRpcSockets.Add(si.GlobalServerId, newServerConnectionRPC);
@@ -146,6 +161,8 @@ namespace Protophase.Registry
          */
         private void RemoveServerFromPool(ServerInfo si)
         {
+            if (si.GlobalServerId == _serverUid)
+                throw new Exception("Cannot use RemoveServerFromPool on self");
             PoolDebug("Removing server from pool: " + si.GlobalServerId);
             _serverRpcSockets[si.GlobalServerId].Dispose();
             _serverRpcSockets.Remove(si.GlobalServerId);
@@ -303,10 +320,17 @@ namespace Protophase.Registry
                                                 _servicesPerApplication[serviceID].Activity = DateTime.Now;
                                         }
                                         break;
-                                    case ServerPoolMessagePublish.FullSync:
+                                    case ServerPoolMessagePublish.ServiceAdded:
                                         {
-                                            SyncMessage syncMsg = StreamUtil.Read<SyncMessage>(stream);
-                                            Synchronize(syncMsg);
+                                            ulong appID = StreamUtil.Read<ulong>(stream);
+                                            ServiceInfo serviceInfo = StreamUtil.Read<ServiceInfo>(stream);
+                                            Register(appID, serviceInfo);
+                                        }
+                                        break;
+                                    case ServerPoolMessagePublish.ServiceRemoved:
+                                        {
+                                            String uid = StreamUtil.Read<String>(stream);
+                                            Unregister(uid);
                                         }
                                         break;
                                 }
@@ -402,7 +426,10 @@ namespace Protophase.Registry
         {
             foreach (var server in remote)
                 if (!_knownServers.Where(x => (x.GlobalServerId == server.GlobalServerId)).Any())
+                {
+                    Console.WriteLine("Remote server not known in MergeServers! UNEXPECTED!");
                     AddServerToServerPool(server);
+                }
         }
 
         /*   
@@ -441,7 +468,9 @@ namespace Protophase.Registry
         {
             ServerPulse,
             ServicePulse,
-            FullSync
+            ServiceAdded,
+            ServiceRemoved,
+
         }
 
         /*
@@ -462,13 +491,8 @@ namespace Protophase.Registry
             if (_lastSync.AddSeconds(SERVER_FULLSYNC_INTERVAL) < DateTime.Now)
             {
                 _lastSync = DateTime.Now;
-                SyncMessage thisData = new SyncMessage();
-                thisData.KnownServers = _knownServers;
-                thisData.ServerId = _serverUid;
-                thisData.ServicesByType = _servicesByType;
-                thisData.ServicesByUid = _servicesByUID;
-                thisData.ServicesPerApplication = _servicesPerApplication;
-                ServerPoolPublish(ServerPoolMessagePublish.FullSync, thisData);
+
+                //ServerPoolPublish(ServerPoolMessagePublish.FullSync, thisData);
             }
         }
     }

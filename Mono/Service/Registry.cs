@@ -427,8 +427,6 @@ namespace Protophase.Service {
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Error in registry connection: "  + ": " + e.Message);
-                    //if (e.Errno == 156384763)
                     {
                         if (_serverAlternatives.Count < 2)
                             throw new Exception("Connection with registry failed without any alternitives present.");
