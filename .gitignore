@@ -10,6 +10,7 @@
 /Mono/Examples/PubSubServiceFailureReplace/obj
 /Mono/Examples/RPCServiceFailureReplace/obj
 /Mono/Examples/RegistryStresstester/obj
+/Mono/Examples/RegistryFailureTest/obj
 /Mono/Examples/Common/obj
 /Mono/Examples/AisServices/AisDataChecksumStatistics/obj
 /Mono/Examples/AisServices/AisDecoder/obj
