@@ -146,15 +146,15 @@ namespace Protophase.Registry {
                     case RegistryMessageType.RegisterService: {
                         ulong appID = StreamUtil.Read<ulong>(stream);
                         ServiceInfo serviceInfo = StreamUtil.Read<ServiceInfo>(stream);
+                        ServerPoolPublish(ServerPoolMessagePublish.ServiceAdded, appID, serviceInfo);
                         MemoryStream sendStream = new MemoryStream();
                         StreamUtil.WriteBool(sendStream, Register(appID, serviceInfo));
                         _rpcSocket.Send(sendStream.GetBuffer());
-
                         break;
                     }
                     case RegistryMessageType.UnregisterService: {
                         String uid = StreamUtil.Read<String>(stream);
-
+                        ServerPoolPublish(ServerPoolMessagePublish.ServiceRemoved, uid);
                         MemoryStream sendStream = new MemoryStream();
                         StreamUtil.WriteBool(sendStream, Unregister(uid));
                         _rpcSocket.Send(sendStream.GetBuffer());
