@@ -28,7 +28,7 @@ namespace Protophase.Registry {
 
         private ulong _nextApplicationID = 0;
 
-        private static readonly float SERVICE_TIMEOUT = 20.0f; //It is wise keeping this above the sync interval 
+        private static readonly float SERVICE_TIMEOUT = 30.0f; //It is wise keeping this above the sync interval
 
         /**
         Delegate for the idle event.
@@ -133,8 +133,7 @@ namespace Protophase.Registry {
                 switch(messageType) {
                     case RegistryMessageType.RegisterApplication: {
                         MemoryStream sendStream = new MemoryStream();
-                        //TODO: make sure the applicationID is unique throughout the server pool
-                        StreamUtil.Write(sendStream, _nextApplicationID++);
+                        StreamUtil.Write(sendStream, NewUniqueApplicationUid());
                         StreamUtil.Write(sendStream, SERVICE_TIMEOUT);
                         StreamUtil.Write(sendStream, AlternateRegistries());
                         StreamUtil.Write(sendStream, _serverUid);
@@ -183,6 +182,11 @@ namespace Protophase.Registry {
                     case RegistryMessageType.Pulse: {
                         ulong appID = StreamUtil.Read<ulong>(stream);
                         ApplicationPulseReceived(appID);
+
+
+                        //MemoryStream sendStream = new MemoryStream();
+                        //StreamUtil.WriteWithNullCheck(sendStream, services);
+                        //_rpcSocket.Send(sendStream.GetBuffer());
                         _rpcSocket.Send();
                         break;
                     }

@@ -45,7 +45,7 @@ namespace Protophase.Service {
             new MultiValueDictionary<String, Service>();
 
         private static readonly String UID_GENERATOR_PREFIX = "__";
-        private static readonly float REGISTRY_TIMEOUT_DIVIDER = 2.0f;
+        private static readonly float REGISTRY_TIMEOUT_DIVIDER = 3.0f;
 
         /**
         Delegate for the idle event.
@@ -411,7 +411,10 @@ namespace Protophase.Service {
                 try
                 {
                     _registryRPCSocket.Send(stream.GetBuffer());
-                    _registryRPCSocket.Recv(1000);
+                    byte[] message = _registryRPCSocket.Recv(1000);
+                    //Receive bool, if true -> all ok, if false will receive new appID
+                    //bool ack = Stream
+
                 }
                 catch (ZMQ.Exception e)
                 {
@@ -422,7 +425,8 @@ namespace Protophase.Service {
                             throw new Exception("Connection with registry failed without any alternitives present.");
                         else
                         {
-                            AlternateRegistryServer alt = _serverAlternatives.Where(x => (x.ServerID != _serverID)).First();
+                            AlternateRegistryServer alt =
+                                _serverAlternatives.Where(x => (x.ServerID != _serverID)).OrderBy(x => x.ServerID).Last();
                             _serverID = alt.ServerID;
                             _registryRPCAddress = alt.ServerRPCAddress;
                             _registryPublishAddress = alt.ServerPubAddress;

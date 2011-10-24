@@ -14,7 +14,9 @@ namespace Protophase.Registry
      */
     public partial class Server
     {
-        private List<long> _reservedUids = new List<long>();
+        private List<long> _reservedServerUids = new List<long>();
+        private List<ulong> _reservedApplicationUids = new List<ulong>();
+
         private long _serverUid;
         private List<ServerInfo> _knownServers = new List<ServerInfo>();
         private Dictionary<long, Socket> _serverRpcSockets = new Dictionary<long, Socket>();
@@ -48,7 +50,7 @@ namespace Protophase.Registry
                     {
                         long proposal = StreamUtil.Read<long>(stream);
                         bool ok = true;
-                        if (_serverUid == proposal || _knownServers.Where(x => (x.GlobalServerId == proposal)).Any() || _reservedUids.Contains(proposal))
+                        if (_serverUid == proposal || _knownServers.Where(x => (x.GlobalServerId == proposal)).Any() || _reservedServerUids.Contains(proposal))
                             ok = false;
                         MemoryStream sendStream = new MemoryStream();
                         StreamUtil.Write(sendStream, ok);
@@ -61,6 +63,18 @@ namespace Protophase.Registry
                         AddServerToServerPool(si);
                         _rpcSocket.Send();
                         PoolDebug("Remote server joined pool");
+                    }
+                    break;
+                //SERVICE (a client)
+                case ServerPoolMessageRPC.ReserveServiceUid:
+                    {
+                        ulong proposal = StreamUtil.Read<ulong>(stream);
+                        bool ok = true;
+                        if (_reservedApplicationUids.Contains(proposal))
+                            ok = false;
+                        MemoryStream sendStream = new MemoryStream();
+                        StreamUtil.Write(sendStream, ok);
+                        _rpcSocket.Send(sendStream.GetBuffer());
                     }
                     break;
             }
@@ -163,15 +177,15 @@ namespace Protophase.Registry
                 //Console.WriteLine("Started a Server Pool!");
             }
             long reserved = 0;
-            if (_reservedUids.Any())
-                reserved = _reservedUids.Max();
+            if (_reservedServerUids.Any())
+                reserved = _reservedServerUids.Max();
 
             long proposal = Math.Max(_serverUid,  Math.Max(_knownServers.Max(x => (x.GlobalServerId)), reserved));
             bool proposalAccepted;
             do
             {
                 proposal++;
-                _reservedUids.Add(proposal);
+                _reservedServerUids.Add(proposal);
                 proposalAccepted = true;
                 foreach (KeyValuePair<long, Socket> knownServer in _serverRpcSockets)
                 {
@@ -212,6 +226,45 @@ namespace Protophase.Registry
         public void DumpPool()
         {
             PoolDebug("");
+        }
+
+        /* Function creates a Application UID proposal and makes sure this is not used in the serverpool.
+         * A free, and server pool wide reserved, uid is returned
+         */
+        private ulong NewUniqueApplicationUid()
+        {
+            ulong proposal;
+            bool accepted;
+            do
+            {
+                proposal = BitConverter.ToUInt64(Guid.NewGuid().ToByteArray(), 0);
+                _reservedApplicationUids.Add(proposal);
+                accepted = true;
+                foreach (var server in _knownServers)
+                {
+                    if (server.GlobalServerId != _serverUid)
+                    {
+                        SendServerPoolMessage(_serverRpcSockets[server.GlobalServerId], ServerPoolMessageRPC.ReserveServiceUid, proposal);
+                        try
+                        {
+                            byte[] message = _serverRpcSockets[server.GlobalServerId].Recv(2000);
+                            MemoryStream receiveStream = new MemoryStream(message);
+                            bool ok = StreamUtil.Read<bool>(receiveStream);
+                            if (!ok)
+                            {
+                                //Try a new proposal.
+                                accepted = false;
+                                break;
+                            }
+                        } catch(ZMQ.Exception e)
+                        {
+                            Console.WriteLine("Timeout when reserving application id: " + e.Message);   
+                        }
+                    }
+                }
+            } while (!accepted);
+            PoolDebug("Proposal accepted: " + proposal);
+            return proposal;
         }
 
         /*
@@ -269,11 +322,13 @@ namespace Protophase.Registry
         /*
          * Makes sure other registries in the pool are notified of the current pulse.
          */
-        private void ApplicationPulseReceived(ulong appId)
+        private bool ApplicationPulseReceived(ulong appId)
         {
-            if (_servicesPerApplication.ContainsKey(appId))
-                _servicesPerApplication[appId].Activity = DateTime.Now;
+            if (!_servicesPerApplication.ContainsKey(appId))
+                return false;
+            _servicesPerApplication[appId].Activity = DateTime.Now;
             ServerPoolPublish(ServerPoolMessagePublish.ServicePulse, appId);
+            return true;
         }
 
 
@@ -378,6 +433,7 @@ namespace Protophase.Registry
         {
             RequestServerUid,
             ReserveServerUid,
+            ReserveServiceUid,
             AddServer
         }
 
