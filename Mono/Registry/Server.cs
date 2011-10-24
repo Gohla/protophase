@@ -133,7 +133,10 @@ namespace Protophase.Registry {
                 switch(messageType) {
                     case RegistryMessageType.RegisterApplication: {
                         MemoryStream sendStream = new MemoryStream();
-                        StreamUtil.Write(sendStream, NewUniqueApplicationUid());
+                        ulong newAppID = NewUniqueApplicationUid();
+                        //Create new ServicesPerApplication container.
+                        _servicesPerApplication.Add(newAppID, new ServiceUidHolder());
+                        StreamUtil.Write(sendStream, newAppID);
                         StreamUtil.Write(sendStream, SERVICE_TIMEOUT);
                         StreamUtil.Write(sendStream, AlternateRegistries());
                         StreamUtil.Write(sendStream, _serverUid);
@@ -143,7 +146,6 @@ namespace Protophase.Registry {
                     case RegistryMessageType.RegisterService: {
                         ulong appID = StreamUtil.Read<ulong>(stream);
                         ServiceInfo serviceInfo = StreamUtil.Read<ServiceInfo>(stream);
-
                         MemoryStream sendStream = new MemoryStream();
                         StreamUtil.WriteBool(sendStream, Register(appID, serviceInfo));
                         _rpcSocket.Send(sendStream.GetBuffer());
@@ -181,13 +183,18 @@ namespace Protophase.Registry {
                     }
                     case RegistryMessageType.Pulse: {
                         ulong appID = StreamUtil.Read<ulong>(stream);
-                        ApplicationPulseReceived(appID);
-
-
-                        //MemoryStream sendStream = new MemoryStream();
-                        //StreamUtil.WriteWithNullCheck(sendStream, services);
-                        //_rpcSocket.Send(sendStream.GetBuffer());
-                        _rpcSocket.Send();
+                        bool appExists = ApplicationPulseReceived(appID);
+                        MemoryStream sendStream = new MemoryStream();
+                        if (!appExists)
+                        {
+                            ulong newAppId = NewUniqueApplicationUid();
+                            _servicesPerApplication.Add(newAppId, new ServiceUidHolder());
+                            StreamUtil.Write(sendStream, false);
+                            StreamUtil.Write(sendStream, newAppId);
+                        }
+                        else
+                            StreamUtil.Write(sendStream, true);
+                        _rpcSocket.Send(sendStream.GetBuffer());
                         break;
                     }
                     case RegistryMessageType.ServerPoolMessage:
@@ -348,9 +355,6 @@ namespace Protophase.Registry {
                     ulong appID = results.Single().Key;
                     if(_servicesPerApplication.ContainsKey(appID))
                         _servicesPerApplication[appID].Services.Remove(results.Single().ServiceInfo);
-                    //Remove the application instance if there are no longer any services attached
-                    if (_servicesPerApplication[appID].Services.Count == 0)
-                        _servicesPerApplication.Remove(appID);
                 }
 
                 // Publish service unregistered message

@@ -413,21 +413,30 @@ namespace Protophase.Service {
                 {
                     _registryRPCSocket.Send(stream.GetBuffer());
                     byte[] message = _registryRPCSocket.Recv(1000);
-                    //Receive bool, if true -> all ok, if false will receive new appID
-                    //bool ack = Stream
-
-                }
-                catch (ZMQ.Exception e)
-                {
-                    Console.WriteLine("Error in registry connection: " + e.Errno + ": " + e.Message);
-                    if (e.Errno == 156384763)
+                    MemoryStream reply = StreamUtil.CreateStream(message);
+                    bool ack = StreamUtil.Read<bool>(reply);
+                    if (!ack)
                     {
-                        if (_serverAlternatives.Count <= 1)
+                        //The registry server did not recognise our current application ID.
+                        //Recieve new application ID.
+                        _applicationID = StreamUtil.Read<ulong>(reply);
+                        //Re register our current services with the registry.
+                        Console.WriteLine("Registry did not recognise our AppID! - Recovering with new appid:" + _applicationID);
+                        //TODO Re register all this client's services.
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error in registry connection: "  + ": " + e.Message);
+                    //if (e.Errno == 156384763)
+                    {
+                        if (_serverAlternatives.Count < 2)
                             throw new Exception("Connection with registry failed without any alternitives present.");
                         else
                         {
-                            AlternateRegistryServer alt =
-                                _serverAlternatives.Where(x => (x.ServerID != _serverID)).OrderBy(x => x.ServerID).Last();
+                            if (_serverAlternatives.Where(x => (x.ServerID == _serverID)).Any())
+                                _serverAlternatives.Remove(_serverAlternatives.Where(x => (x.ServerID == _serverID)).Single());
+                            AlternateRegistryServer alt = _serverAlternatives.Where(x => (x.ServerID != _serverID)).First();
                             _serverID = alt.ServerID;
                             _registryRPCAddress = alt.ServerRPCAddress;
                             _registryPublishAddress = alt.ServerPubAddress;
