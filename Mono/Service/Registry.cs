@@ -16,6 +16,7 @@ namespace Protophase.Service {
         private Context _context;
         private Dictionary<String, object> _objects = new Dictionary<String, object>();
         private Dictionary<object, String> _objectsReverse = new Dictionary<object, String>();
+        private Dictionary<String, ServiceInfo> _objectServiceInfo = new Dictionary<String, ServiceInfo>();
         private MultiValueDictionary<String, Tuple<PublishedDelegate, EventInfo>> _publishedDelegates =
             new MultiValueDictionary<String, Tuple<PublishedDelegate, EventInfo>>();
         private bool _stopAutoUpdate = false;
@@ -491,7 +492,7 @@ namespace Protophase.Service {
         @return True if service is successfully registered, false if a service with given UID already exists.
         **/
         public bool Register<T>(T obj) {
-            return Register(_applicationID + UID_GENERATOR_PREFIX + _uidPrefix++, obj);
+            return Register(_applicationID + UID_GENERATOR_PREFIX + _uidPrefix++, obj, true);
         }
 
         /**
@@ -505,6 +506,21 @@ namespace Protophase.Service {
                 UID is reserved.
         **/
         public bool Register<T>(String uid, T obj) {
+            return Register(uid, obj, false);
+        }
+
+        /**
+        Registers given service with the registry server with a unique name.
+        
+        @tparam T   Type of the service.
+        @param  uid             The UID of the service.
+        @param  obj             The service object.
+        @param  generatedUID    Set to true if given UID was generated.
+        
+        @return True if service is successfully registered, false if a service with given UID already exists or if
+                the UID is reserved.
+        **/
+        private bool Register<T>(String uid, T obj, bool generatedUID) {
             if(uid.StartsWith(UID_GENERATOR_PREFIX)) return false;
 
             Type type = typeof(T);
@@ -517,10 +533,12 @@ namespace Protophase.Service {
                 publishAddress = BindPublish(uid);
 
                 if(rpcAddress == null || publishAddress == null) {
+                    // TODO: Make exception.
                     Console.WriteLine("Could not register object: Failed to bind socket.");
                     return false;
                 }
             } catch (System.Exception e) {
+                // TODO: Make exception.
                 Console.WriteLine("Could not register object: " + e.Message);
                 return false;
             }
@@ -551,8 +569,8 @@ namespace Protophase.Service {
                 }
             }
 
-            ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, rpcAddress, publishAddress, 
-                rpcMethods);
+            ServiceInfo serviceInfo = new ServiceInfo(uid, serviceType, serviceVersion, rpcAddress, publishAddress,
+                rpcMethods, generatedUID);
 
             // Serialize to binary
             MemoryStream stream = new MemoryStream();
@@ -571,10 +589,42 @@ namespace Protophase.Service {
             if(StreamUtil.ReadBool(receiveStream)) {
                 _objects.Add(uid, obj);
                 _objectsReverse.Add(obj, uid);
+                _objectServiceInfo.Add(uid, serviceInfo);
                 return true;
             }
 
             return false;
+        }
+
+
+        /**
+        Re-registers all services.
+        **/
+        private void ReRegisterAll() {
+            // Store all services.
+            Dictionary<String, object> objects = new Dictionary<String, object>(_objects);
+            Dictionary<String, ServiceInfo> objectServiceInfo = new Dictionary<String, ServiceInfo>(_objectServiceInfo);
+
+            // Unregister all services.
+            UnregisterAll(true);
+
+            // Register all services again.
+            foreach(KeyValuePair<String, object> pair in objects) {
+                ServiceInfo serviceInfo = objectServiceInfo[pair.Key];
+
+                // TODO: Catch exception
+                if(serviceInfo.GeneratedUID) {
+                    if(!Register(pair.Value)) {
+                        Console.WriteLine("Failed to reregister service named " + pair.Key + 
+                            ": UID already exists on the server");
+                    }
+                } else {
+                    if(!Register(pair.Key, pair.Value)) {
+                        Console.WriteLine("Failed to reregister service named " + pair.Key + 
+                            ": UID already exists on the server");
+                    }
+                }
+            }
         }
 
         /**
@@ -601,18 +651,36 @@ namespace Protophase.Service {
         @return True if service is successfully unregistered, false if service with given UID does not exists.
         **/
         public bool Unregister(String uid) {
-            // Serialize to binary
-            MemoryStream stream = new MemoryStream();
-            // Write message type
-            stream.WriteByte((byte)RegistryMessageType.UnregisterService);
-            // Write UID
-            StreamUtil.Write<String>(stream, uid);
+            return Unregister(uid, false);
+        }
 
-            // Send to registry and await results.
-            _registryRPCSocket.Send(stream.GetBuffer());
-            MemoryStream receiveStream = StreamUtil.CreateStream(_registryRPCSocket.Recv());
+        /**
+        Unregisters service with given UID.
+        
+        @param  uid                     The UID of the service.
+        @param  clientSideUnregister    True to unregister only on the client. Used after a registry disconnect.
+        
+        @return True if service is successfully unregistered, false if service with given UID does not exists.
+        **/
+        public bool Unregister(String uid, bool clientSideUnregister) {
+            bool unregisterLocally = clientSideUnregister;
 
-            if(StreamUtil.ReadBool(receiveStream)) {
+            if(!clientSideUnregister) {
+                // Serialize to binary
+                MemoryStream stream = new MemoryStream();
+                // Write message type
+                stream.WriteByte((byte)RegistryMessageType.UnregisterService);
+                // Write UID
+                StreamUtil.Write<String>(stream, uid);
+
+                // Send to registry and await results.
+                _registryRPCSocket.Send(stream.GetBuffer());
+                MemoryStream receiveStream = StreamUtil.CreateStream(_registryRPCSocket.Recv());
+
+                unregisterLocally = StreamUtil.ReadBool(receiveStream);
+            }
+
+            if(unregisterLocally) {
                 // Dispose of RPC socket.
                 Socket socket;
                 if(_rpcSockets.TryGetValue(uid, out socket)) {
@@ -638,6 +706,7 @@ namespace Protophase.Service {
                 _publishedDelegates.Remove(uid);
 
                 // Update own object dictionaries.
+                _objectServiceInfo.Remove(uid);
                 _objectsReverse.Remove(obj);
                 _objects.Remove(uid);
 
@@ -651,8 +720,17 @@ namespace Protophase.Service {
         Unregisters all services.
         **/
         public void UnregisterAll() {
+            UnregisterAll(false);
+        }
+
+        /**
+        Unregisters all services.
+        
+        @param  clientSideUnregister    True to unregister only on the client. Used after a registry disconnect.
+        **/
+        private void UnregisterAll(bool clientSideUnregister) {
             List<String> uids = new List<String>(_objects.Keys);
-            foreach(String uid in uids) Unregister(uid);
+            foreach(String uid in uids) Unregister(uid, clientSideUnregister);
         }
 
         /**
