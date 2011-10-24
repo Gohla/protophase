@@ -69,7 +69,7 @@ namespace RegistryFailureTest
         public event PublishedDelegate TestMethod;
         public void Start()
         {
-            _registry = new Registry(new Address(Transport.TCP, "localhost", 4000), new Address(Transport.TCP, "localhost", 4001), "*");
+            _registry = new Registry(new Address(Transport.TCP, "localhost", 4000), new Address(Transport.TCP, "localhost", 4001), "localhost");
             _registry.Register(this);
             while (!_stop)
             {

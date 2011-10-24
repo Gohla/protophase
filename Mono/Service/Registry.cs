@@ -495,44 +495,41 @@ namespace Protophase.Service {
         /**
         Registers given service with the registry server with a generated name.
         
-        @tparam T   Type of the service.
-        @param  obj         The service object.
+        @param  obj The service object.
         
         @return True if service is successfully registered, false if a service with given UID already exists.
         **/
-        public bool Register<T>(T obj) {
+        public bool Register(object obj) {
             return Register(_applicationID + UID_GENERATOR_PREFIX + _uidPrefix++, obj, true);
         }
 
         /**
         Registers given service with the registry server with a unique name.
         
-        @tparam T   Type of the service.
         @param  uid The UID of the service.
         @param  obj The service object.
         
-        @return True if service is successfully registered, false if a service with given UID already exists or if the 
-                UID is reserved.
+        @return True if service is successfully registered, false if a service with given UID already exists or if
+        the UID is reserved.
         **/
-        public bool Register<T>(String uid, T obj) {
+        public bool Register(String uid, object obj) {
             return Register(uid, obj, false);
         }
 
         /**
         Registers given service with the registry server with a unique name.
         
-        @tparam T   Type of the service.
         @param  uid             The UID of the service.
         @param  obj             The service object.
         @param  generatedUID    Set to true if given UID was generated.
         
         @return True if service is successfully registered, false if a service with given UID already exists or if
-                the UID is reserved.
+        the UID is reserved.
         **/
-        private bool Register<T>(String uid, T obj, bool generatedUID) {
+        private bool Register(String uid, object obj, bool generatedUID) {
             if(uid.StartsWith(UID_GENERATOR_PREFIX)) return false;
 
-            Type type = typeof(T);
+            Type type = obj.GetType();
 
             // Bind RPC and publish sockets.
             Address rpcAddress;
