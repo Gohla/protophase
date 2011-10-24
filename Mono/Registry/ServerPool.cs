@@ -140,7 +140,7 @@ namespace Protophase.Registry
             _knownServers.Remove(si);
             //publish this dead server's id to the clients
             MemoryStream stream = new MemoryStream();
-            stream.WriteByte((byte)RegistryPublishType.AlternateRegistryUnAvailable);
+            stream.WriteByte((byte)RegistryPublishType.AlternateRegistryUnavailable);
             StreamUtil.Write(stream, si.GlobalServerId);
             _publishSocket.Send(stream.GetBuffer());
         }

@@ -8,6 +8,6 @@
         ServicePulse,
         ServerPoolMessage,
         AlternateRegistryAvailable,
-        AlternateRegistryUnAvailable
+        AlternateRegistryUnavailable
     }
 }

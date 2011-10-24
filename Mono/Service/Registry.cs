@@ -223,6 +223,7 @@ namespace Protophase.Service {
                         throw new Exception("Unsupported transport: " + Enum.GetName(typeof(Transport), _hostTransport));
                 }
                 
+                
                 _rpcSockets.Add(uid, socket);
                 return address;
             }
@@ -295,7 +296,7 @@ namespace Protophase.Service {
                         if (!_serverAlternatives.Where(x=>(x.ServerID == alt.ServerID)).Any())
                             _serverAlternatives.Add(alt);
                         break;
-                    case RegistryPublishType.AlternateRegistryUnAvailable:
+                    case RegistryPublishType.AlternateRegistryUnavailable:
                         long serverId = StreamUtil.Read<long>(stream);
                         AlternateRegistryServer remove = null;
                         if (_serverAlternatives.Where(x => (x.ServerID == serverId)).Any())
