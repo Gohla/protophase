@@ -422,7 +422,7 @@ namespace Protophase.Service {
                         _applicationID = StreamUtil.Read<ulong>(reply);
                         //Re register our current services with the registry.
                         Console.WriteLine("Registry did not recognise our AppID! - Recovering with new appid:" + _applicationID);
-                        //TODO Re register all this client's services.
+                        ReRegisterAll();
                     }
                 }
                 catch (Exception e)
