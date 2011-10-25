@@ -55,14 +55,6 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Service, Version=1.0.4259.41916, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\protophase\Mono\Service\bin\Debug\Service.dll</HintPath>
-    </Reference>
-    <Reference Include="Shared, Version=1.0.4259.41916, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\protophase\Mono\Shared\bin\Debug\Shared.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -116,6 +108,14 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Service\Service.csproj">
+      <Project>{3509E6B7-1F72-4FE8-B324-015437DD679A}</Project>
+      <Name>Service</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Shared\Shared.csproj">
+      <Project>{712E9B63-96F4-464C-8102-237D307C8EF6}</Project>
+      <Name>Shared</Name>
+    </ProjectReference>
     <ProjectReference Include="..\AisTools\AisTools.csproj">
       <Project>{0F897B12-53AD-4876-91FA-5D83573260B3}</Project>
       <Name>AisTools</Name>

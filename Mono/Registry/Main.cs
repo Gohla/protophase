@@ -6,8 +6,12 @@ namespace Protophase.Registry {
 
         public static void Main(String[] args) {
             Console.CancelKeyPress += CancelKeyPressHandler;
-
             _server = new Server();
+            if (args.Length > 0)
+            {
+                Console.WriteLine(args[0]);
+                Console.WriteLine(args[1]);
+            }
             _server.AutoUpdate(1);
             _server.Dispose();
         }

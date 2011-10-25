@@ -78,8 +78,9 @@ namespace RPCServiceFailureReplace
                 }
                 _registry.Unregister(this);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                //Console.WriteLine(e.Message);
                 //   throw;
             }
 

@@ -244,7 +244,7 @@ namespace Protophase.Service {
         **/
         private Address BindPublish(String uid) {
             if(!_publishSockets.ContainsKey(uid)) {
-                Socket socket = _context.Socket(SocketType.REP);
+                Socket socket = _context.Socket(SocketType.PUB);
                 Address address;
 
                 switch(_hostTransport) {

@@ -16,7 +16,7 @@ namespace AisReceiverServiceRPC
             Registry registry = new Registry("tcp://localhost:5555");
 
             // Get KMLDumper service
-            Service KMLDumperInstance = registry.GetService("KMLDumperInstance"); //only UID?
+            Service KMLDumperInstance = registry.GetServiceByUID("KMLDumperInstance"); //only UID?
             if (KMLDumperInstance == null)
             {
                 Console.WriteLine("Failed because a KMLDumperInstance was not returned by the registry. Press enter");
