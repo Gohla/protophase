@@ -15,43 +15,46 @@ namespace RawAisService
         private static Registry registry;
         static void Main(string[] args)
         {
-            Console.CancelKeyPress += CancelKeyPressHandler;
-            registry = new Registry("tcp://localhost:5555");
-            AisDataPublisher aisDataPublisher = new AisDataPublisher();
-            if (!registry.Register("RawAisDataPublisher", aisDataPublisher))
-            {
-                Console.WriteLine("Error registering service.");
-                return;
-            }
-            Console.WriteLine("Registered service.");
-            try
-            {
-                TcpClient tcpclient = new TcpClient();
-                tcpclient.Connect(args[1], Int32.Parse(args[2]));
-                StreamReader sr = new StreamReader(tcpclient.GetStream());
-                string data;
-                while ((data = sr.ReadLine()) != null)
-                {
-                    Console.WriteLine("Raw data: " + data);
-                    registry.Publish("RawAisDataPublisher", data);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message + e.StackTrace);
-                Console.WriteLine("Press enter");
-                Console.ReadLine();
-            }
-        }
-
-        private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
-        {
-            registry.Unregister("RawAisDataPublisher");
+            new AisDataPublisher().Start(args);
         }
 
         [ServiceType("RawAisDataPublisher"), ServiceVersion("0.1")]
         public class AisDataPublisher
         {
+            [Publisher]
+            public event PublishedDelegate RawAisData;
+
+            public void Start(string[] args)
+            {
+                registry = new Registry();
+                if (!registry.Register(this))
+                {
+                    Console.WriteLine("Error registering service.");
+                    return;
+                }
+                Console.WriteLine("Registered service.");
+                try
+                {
+                    TcpClient tcpclient = new TcpClient();
+                    if (args.Count() != 2)
+                        throw new Exception("Argument must contain a publishing ip and port. call with: 127.0.0.1 12345");
+                    tcpclient.Connect(args[0], Int32.Parse(args[1]));
+                    StreamReader sr = new StreamReader(tcpclient.GetStream());
+                    string data;
+                    while ((data = sr.ReadLine()) != null)
+                    {
+                        Console.WriteLine("Raw data: " + data);
+                        if (RawAisData != null)
+                            RawAisData(data);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message + e.StackTrace);
+                    Console.WriteLine("Press enter");
+                    Console.ReadLine();
+                }
+            }
         }
     }
 }

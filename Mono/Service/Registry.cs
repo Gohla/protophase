@@ -293,6 +293,7 @@ namespace Protophase.Service {
                         break;
                     }
                     case RegistryPublishType.AlternateRegistryAvailable:
+                        Console.WriteLine("###Alternate registry available!###");
                         AlternateRegistryServer alt = StreamUtil.Read<AlternateRegistryServer>(stream);
                         if (!_serverAlternatives.Where(x=>(x.ServerID == alt.ServerID)).Any())
                             _serverAlternatives.Add(alt);
@@ -409,10 +410,11 @@ namespace Protophase.Service {
                 StreamUtil.Write(stream, _applicationID);
 
                 // Send to registry and await results.
-                try
+
+                _registryRPCSocket.Send(stream.GetBuffer());
+                byte[] message = _registryRPCSocket.Recv(1000);
+                if (message != null)
                 {
-                    _registryRPCSocket.Send(stream.GetBuffer());
-                    byte[] message = _registryRPCSocket.Recv(1000);
                     MemoryStream reply = StreamUtil.CreateStream(message);
                     bool ack = StreamUtil.Read<bool>(reply);
                     if (!ack)
@@ -425,27 +427,23 @@ namespace Protophase.Service {
                         ReRegisterAll();
                     }
                 }
-                catch (Exception e)
+                else
                 {
                     {
-                        if (_serverAlternatives.Count < 2)
+                        if (!_serverAlternatives.Where(x => (x.ServerID != _serverID)).Any())
                             throw new Exception("Connection with registry failed without any alternitives present.");
-                        else
-                        {
-                            if (_serverAlternatives.Where(x => (x.ServerID == _serverID)).Any())
-                                _serverAlternatives.Remove(_serverAlternatives.Where(x => (x.ServerID == _serverID)).Single());
-                            AlternateRegistryServer alt = _serverAlternatives.Where(x => (x.ServerID != _serverID)).First();
-                            _serverID = alt.ServerID;
-                            _registryRPCAddress = alt.ServerRPCAddress;
-                            _registryPublishAddress = alt.ServerPubAddress;
-                            _registryRPCSocket = _context.Socket(SocketType.REQ);
-                            _registryRPCSocket.Connect(_registryRPCAddress);
-                            _registryPublishSocket = _context.Socket(SocketType.SUB);
-                            _registryPublishSocket.Connect(_registryPublishAddress);
-                            _registryPublishSocket.Subscribe(new byte[0]);
-                            Console.WriteLine("Failing registry detected. Transitioned to alternate registry server. New server id: " + _serverID);
-                        }
-
+                        if (_serverAlternatives.Where(x => (x.ServerID == _serverID)).Any())
+                            _serverAlternatives.Remove(_serverAlternatives.Where(x => (x.ServerID == _serverID)).Single());
+                        AlternateRegistryServer alt = _serverAlternatives.Where(x => (x.ServerID != _serverID)).First();
+                        _serverID = alt.ServerID;
+                        _registryRPCAddress = alt.ServerRPCAddress;
+                        _registryPublishAddress = alt.ServerPubAddress;
+                        _registryRPCSocket = _context.Socket(SocketType.REQ);
+                        _registryRPCSocket.Connect(_registryRPCAddress);
+                        _registryPublishSocket = _context.Socket(SocketType.SUB);
+                        _registryPublishSocket.Connect(_registryPublishAddress);
+                        _registryPublishSocket.Subscribe(new byte[0]);
+                        Console.WriteLine("Failing registry detected. Transitioned to alternate registry server. New server id: " + _serverID);
                     }
                 }
                 _lastPulse = DateTime.Now;

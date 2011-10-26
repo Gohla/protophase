@@ -8,18 +8,37 @@ using Protophase.Shared;
 
 namespace AisReceiverService
 {
-    class AisReceiverService
+    internal class AisReceiverService
     {
-        private static Registry registry;
-        private static bool quit;
-        static void Main(string[] args)
+        private static AisDataPublisher p;
+        private static void Main(string[] args)
         {
-            /* Subscribe to a RAW ais data service
-             */
-            Console.CancelKeyPress += CancelKeyPressHandler;
-            registry = new Registry("tcp://localhost:5555");
-            AisDataPublisher aisDataPublisher = new AisDataPublisher();
-            if (!registry.Register("AisDataPublisher", aisDataPublisher))
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
+            p = new AisDataPublisher();
+            p.Start();
+        }
+
+        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            p.quit = true;
+        }
+    }
+
+
+    [ServiceType("AisDataPublisher"), ServiceVersion("0.1")]
+    public class AisDataPublisher
+    {
+        [Publisher]
+        public event PublishedDelegate AisData;
+
+
+        private Registry registry;
+        public bool quit;
+
+        public void Start()
+        {
+            registry = new Registry();
+            if (!registry.Register(this))
             {
                 Console.WriteLine("Error registering service.");
                 return;
@@ -27,21 +46,19 @@ namespace AisReceiverService
             Console.WriteLine("Registered service.");
             Service rawDataPublisher = null;
             while (rawDataPublisher == null && !quit)
-                rawDataPublisher = registry.GetServiceByUID("RawAisDataPublisher");
+                rawDataPublisher = registry.GetServiceByType("RawAisDataPublisher");
             if (!quit)
                 rawDataPublisher.Published += RAWAisDataRecieved;
-
             while (!quit)
-            {
-                //Thread.Sleep(20);
                 registry.Update();
-            }
-            registry.Unregister("AisDataPublisher");
+            registry.Unregister(this);
         }
+
         /* This method is called each time raw AIS data is recieved, since this method is subscribed to 
-         * RawAisDataPublisher
-         */
-        private static void RAWAisDataRecieved(object obj)
+             * RawAisDataPublisher
+             */
+
+        private void RAWAisDataRecieved(object obj)
         {
             if (obj is string)
             {
@@ -49,22 +66,11 @@ namespace AisReceiverService
                 if (ais != null)
                 {
                     Console.Clear();
-                    AisToolset.DumpAis((AisData)ais);
-                    registry.Publish("AisDataPublisher", ais);
+                    AisToolset.DumpAis((AisData) ais);
+                    if (AisData != null)
+                        AisData(ais);
                 }
             }
-        }
-
-        private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
-        {
-            e.Cancel = true;
-            quit = true;
-            
-        }
-
-        [ServiceType("AisDataPublisher"), ServiceVersion("0.1")]
-        public class AisDataPublisher
-        {
         }
     }
 }

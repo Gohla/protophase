@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Protophase.Service;
 using Protophase.Shared;
 using ZMQ;
@@ -23,38 +24,40 @@ namespace Protophase.Registry
         private Dictionary<long, Socket> _serverRpcSockets = new Dictionary<long, Socket>();
         private Dictionary<long, Socket> _serverPubSockets = new Dictionary<long, Socket>();
 
-
-
-        private DateTime _lastSync = DateTime.Now;
         private DateTime _lastPulse = DateTime.Now;
         private const int SERVER_TIMEOUT = 5;
-        private const int SERVER_FULLSYNC_INTERVAL = 10;
+        private const int CONNECT_TIMEOUT = 2;
 
 
 
         //received rpc message had a ServerPool prefix, so will be treated as a ServerPool message from now on.
-        private void ReceiveServerPoolMessage(MemoryStream stream) 
+        private void ReceiveServerPoolMessage(MemoryStream stream)
         {
             ServerPoolMessageRPC poolMessageRpcType = (ServerPoolMessageRPC)stream.ReadByte();
             switch (poolMessageRpcType)
             {
                 case ServerPoolMessageRPC.RequestServerUid:
                     {
+                        PoolDebug("RequestServerUid firing");
                         Address myPublicRpcAddress = StreamUtil.Read<Address>(stream);
+                        PoolDebug("RequestServerUid firing 0");
                         Address myPublicPubAddress = StreamUtil.Read<Address>(stream);
-
                         long newUid = NewServerUIDInPool(myPublicRpcAddress, myPublicPubAddress);
+                        PoolDebug("RequestServerUid firing 1");
                         SyncMessage thisDataSyncMessage = new SyncMessage();
                         thisDataSyncMessage.KnownServers = _knownServers;
                         thisDataSyncMessage.ServerId = _serverUid;
                         thisDataSyncMessage.ServicesByType = _servicesByType;
+                        PoolDebug("RequestServerUid firing 2");
                         thisDataSyncMessage.ServicesByUid = _servicesByUID;
                         thisDataSyncMessage.ServicesPerApplication = _servicesPerApplication;
-
                         MemoryStream sendStream = new MemoryStream();
+                        PoolDebug("RequestServerUid firing 3");
                         StreamUtil.Write(sendStream, newUid);
                         StreamUtil.Write(sendStream, thisDataSyncMessage);
+                        PoolDebug("RequestServerUid firing 4");
                         _rpcSocket.Send(sendStream.GetBuffer());
+                        PoolDebug("RequestServerUid fired");
                     }
                     break;
 
@@ -107,9 +110,17 @@ namespace Protophase.Registry
             }
             Socket newServerConnection = _context.Socket(SocketType.REQ);
             newServerConnection.Connect(aMemberRPCAddress);
+            Thread.Sleep(500); //hold on
             //Request a unique ID, let the remote server know how this server connected to it.
             SendServerPoolMessage(newServerConnection, ServerPoolMessageRPC.RequestServerUid, aMemberRPCAddress, aMemberPubAddress);
-            byte[] message = newServerConnection.Recv();
+            byte[] message = newServerConnection.Recv(CONNECT_TIMEOUT*1000);
+            if (message == null)
+            {
+                Console.WriteLine("Error when trying to connect with perr Registry. Timeout! (" + CONNECT_TIMEOUT + " seconds)");
+                return;
+            }
+
+            
             MemoryStream receiveStream = new MemoryStream(message);
             //Receive unique ID
             _serverUid = StreamUtil.Read<long>(receiveStream);
@@ -121,6 +132,7 @@ namespace Protophase.Registry
 
             foreach (var remoteServer in syncMessage.KnownServers)
             {
+                Console.WriteLine(remoteServer.GlobalServerId + " added!!!");
                 AddServerToServerPool(remoteServer);
                 SendServerPoolMessage(_serverRpcSockets[remoteServer.GlobalServerId], ServerPoolMessageRPC.AddServer, thisNewPoolMember);
                 _serverRpcSockets[remoteServer.GlobalServerId].Recv();
@@ -140,20 +152,25 @@ namespace Protophase.Registry
         {
             if  (si.GlobalServerId == _serverUid)
                 throw new Exception("Cannot use AddServerToServerPool on self");
+            
             Socket newServerConnectionRPC = _context.Socket(SocketType.REQ);
             newServerConnectionRPC.Connect(si._rpcRemotelyAccessibleAddress);
             _serverRpcSockets.Add(si.GlobalServerId, newServerConnectionRPC);
+
             Socket newServerConnectionPub = _context.Socket(SocketType.SUB);
             newServerConnectionPub.Connect(si._pubRemotelyAccessibleAddress);
             _serverPubSockets.Add(si.GlobalServerId, newServerConnectionPub);
             newServerConnectionPub.Subscribe(new byte[0]);
+            
             _knownServers.Add(si);
             //publish this new server's info to this registry's clients.
+
             MemoryStream stream = new MemoryStream();
             stream.WriteByte((byte)RegistryPublishType.AlternateRegistryAvailable);
             StreamUtil.Write(stream, new AlternateRegistryServer(si.GlobalServerId, si._rpcRemotelyAccessibleAddress, si._pubRemotelyAccessibleAddress));
             _publishSocket.Send(stream.GetBuffer());
-            PoolDebug("Added " + si.GlobalServerId);
+
+            PoolDebug("Added " + si.GlobalServerId + " to pool");
         }
 
         /*
@@ -291,6 +308,8 @@ namespace Protophase.Registry
 
         private void RecieveSubscribed()
         {
+            if (!_serverPubSockets.Any())
+                return;
             foreach (Socket subscription in _serverPubSockets.Values.ToArray())
             {
                 byte[] message = subscription.Recv(SendRecvOpt.NOBLOCK);
@@ -309,8 +328,8 @@ namespace Protophase.Registry
                                     case ServerPoolMessagePublish.ServerPulse:
                                         {
                                             long serverID = StreamUtil.Read<long>(stream);
-                                            _knownServers.Where(x => (x.GlobalServerId == serverID)).Single().Activity =
-                                                DateTime.Now;
+                                            if (_knownServers.Where(x => (x.GlobalServerId == serverID)).Any())
+                                                _knownServers.Where(x => (x.GlobalServerId == serverID)).Single().Activity = DateTime.Now;
                                         }
                                         break;
                                     case ServerPoolMessagePublish.ServicePulse:
@@ -479,7 +498,7 @@ namespace Protophase.Registry
 
         private void ManageServerPool()
         {
-            if (_lastPulse.AddSeconds(SERVER_TIMEOUT / 2) < DateTime.Now)
+            if (_lastPulse.AddSeconds(SERVER_TIMEOUT / 3) < DateTime.Now)
             {
                 ServerPoolPublish(ServerPoolMessagePublish.ServerPulse, _serverUid);
                 _lastPulse = DateTime.Now;
@@ -487,13 +506,6 @@ namespace Protophase.Registry
             var timedOutServers = _knownServers.Where(x => (x.GlobalServerId != _serverUid && x.Activity.AddSeconds(SERVER_TIMEOUT) < DateTime.Now));
             foreach (var server in timedOutServers.ToArray())
                 RemoveServerFromPool(server);
-
-            if (_lastSync.AddSeconds(SERVER_FULLSYNC_INTERVAL) < DateTime.Now)
-            {
-                _lastSync = DateTime.Now;
-
-                //ServerPoolPublish(ServerPoolMessagePublish.FullSync, thisData);
-            }
         }
     }
     [Serializable]

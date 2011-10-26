@@ -69,7 +69,7 @@ namespace AisTools
                 }
             }
             sb.AppendLine(KMLFOOTER);
-            File.WriteAllText("d:\\OUTPUT.kml", sb.ToString());
+            File.WriteAllText("c:\\OUTPUT.kml", sb.ToString());
         }
     }
 }

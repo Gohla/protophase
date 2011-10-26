@@ -21,10 +21,10 @@ namespace AisDataChecksumStatistics
 
         static void Main(string[] args)
         {
-            registry = new Registry("tcp://localhost:5555");
+            registry = new Registry();
             Service rawDataPublisher = null;
             while (rawDataPublisher == null && !quit)
-                rawDataPublisher = registry.GetServiceByUID("RawAisDataPublisher");
+                rawDataPublisher = registry.GetServiceByType("RawAisDataPublisher");
             rawDataPublisher.Published += publishedEvent;
             while (!quit)
             {

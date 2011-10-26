@@ -125,7 +125,6 @@ namespace Protophase.Registry {
             byte[] message = _rpcSocket.Recv(SendRecvOpt.NOBLOCK);
             while(message != null) {
                 MemoryStream stream = StreamUtil.CreateStream(message);
-
                 // Read message type
                 RegistryMessageType messageType = (RegistryMessageType)stream.ReadByte();
 
@@ -241,6 +240,7 @@ namespace Protophase.Registry {
         Sends and receives all network messages.
         **/
         public void Update() {
+            Console.WriteLine(DateTime.Now.ToLongTimeString());
             Receive();
             RecieveSubscribed();
             RemoveTimedOutServices();

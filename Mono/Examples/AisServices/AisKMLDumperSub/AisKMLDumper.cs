@@ -14,10 +14,10 @@ namespace AisKMLDumper
         {
             testKML = new GoogleEarthKMLDumper();
             Console.CancelKeyPress += CancelKeyPressHandler;
-            Registry registry = new Registry("tcp://localhost:5555");
+            Registry registry = new Registry();
             Service aisDataPublisher = null;
             while (aisDataPublisher == null && !quit)
-                aisDataPublisher = registry.GetServiceByUID("AisDataPublisher");
+                aisDataPublisher = registry.GetServiceByType("AisDataPublisher");
             aisDataPublisher.Published += publishedEvent;
             int count = 0;
             while (!quit)
