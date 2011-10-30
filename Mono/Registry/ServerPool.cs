@@ -137,6 +137,7 @@ namespace Protophase.Registry
             foreach (var remoteServer in syncMessage.KnownServers)
             {
                 Console.WriteLine(remoteServer.GlobalServerId + " added!!!");
+                remoteServer.Activity = DateTime.Now;//make sure timeout values are initialised
                 AddServerToServerPool(remoteServer);
                 SendServerPoolMessage(_serverRpcSockets[remoteServer.GlobalServerId], ServerPoolMessageRPC.AddServer, thisNewPoolMember);
                 _serverRpcSockets[remoteServer.GlobalServerId].Recv();
