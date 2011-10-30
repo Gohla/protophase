@@ -25,7 +25,10 @@ namespace Protophase.Registry
         private Dictionary<long, Socket> _serverPubSockets = new Dictionary<long, Socket>();
 
         private DateTime _lastPulse = DateTime.Now;
-        private const int SERVER_TIMEOUT = 5;
+
+        //Server timeout constraints.
+        private const int SERVERMSG_TIMEOUT_MS = 500; 
+        private const int SERVER_TIMEOUT = 5; 
         private const int CONNECT_TIMEOUT = 2;
 
 
@@ -38,26 +41,27 @@ namespace Protophase.Registry
             {
                 case ServerPoolMessageRPC.RequestServerUid:
                     {
-                        PoolDebug("RequestServerUid firing");
+                        //PoolDebug("RequestServerUid firing");
                         Address myPublicRpcAddress = StreamUtil.Read<Address>(stream);
-                        PoolDebug("RequestServerUid firing 0");
+                        //PoolDebug("RequestServerUid firing 0");
                         Address myPublicPubAddress = StreamUtil.Read<Address>(stream);
+                        //PoolDebug("RequestServerUid firing 1");
                         long newUid = NewServerUIDInPool(myPublicRpcAddress, myPublicPubAddress);
-                        PoolDebug("RequestServerUid firing 1");
+                        //PoolDebug("RequestServerUid firing 2");
                         SyncMessage thisDataSyncMessage = new SyncMessage();
                         thisDataSyncMessage.KnownServers = _knownServers;
                         thisDataSyncMessage.ServerId = _serverUid;
                         thisDataSyncMessage.ServicesByType = _servicesByType;
-                        PoolDebug("RequestServerUid firing 2");
+                        //PoolDebug("RequestServerUid firing 3");
                         thisDataSyncMessage.ServicesByUid = _servicesByUID;
                         thisDataSyncMessage.ServicesPerApplication = _servicesPerApplication;
                         MemoryStream sendStream = new MemoryStream();
-                        PoolDebug("RequestServerUid firing 3");
+                        //PoolDebug("RequestServerUid firing 4");
                         StreamUtil.Write(sendStream, newUid);
                         StreamUtil.Write(sendStream, thisDataSyncMessage);
-                        PoolDebug("RequestServerUid firing 4");
+                        //PoolDebug("RequestServerUid firing 5");
                         _rpcSocket.Send(sendStream.GetBuffer());
-                        PoolDebug("RequestServerUid fired");
+                        //PoolDebug("RequestServerUid fired 6");
                     }
                     break;
 
@@ -201,19 +205,17 @@ namespace Protophase.Registry
          */
         private long NewServerUIDInPool(Address remoteServerConnectedToRpc, Address remoteServerConnectedToPub)
         {
-            //Console.WriteLine("NewServerGUID called");
             if (!_knownServers.Any())
             {
+                //Start a new pool if this server does not have any peers yet.
                 _serverUid = 1;
                 ServerInfo own = new ServerInfo(remoteServerConnectedToRpc, remoteServerConnectedToPub);
                 own.GlobalServerId = _serverUid;
                 _knownServers.Add(own);
-                //Console.WriteLine("Started a Server Pool!");
             }
             long reserved = 0;
             if (_reservedServerUids.Any())
                 reserved = _reservedServerUids.Max();
-
             long proposal = Math.Max(_serverUid,  Math.Max(_knownServers.Max(x => (x.GlobalServerId)), reserved));
             bool proposalAccepted;
             do
@@ -221,7 +223,8 @@ namespace Protophase.Registry
                 proposal++;
                 _reservedServerUids.Add(proposal);
                 proposalAccepted = true;
-                foreach (KeyValuePair<long, Socket> knownServer in _serverRpcSockets)
+
+                foreach (KeyValuePair<long, Socket> knownServer in _serverRpcSockets.ToDictionary(entry => entry.Key, entry => entry.Value)) //make a copy since peersd might be removed if their timeout fails.
                 {
                     //Dont send a reserve message to self
                     if (knownServer.Key == _serverUid)
@@ -229,7 +232,14 @@ namespace Protophase.Registry
                     //Send a reserve message for current proposal
                     Socket server = knownServer.Value;
                     SendServerPoolMessage(server, ServerPoolMessageRPC.ReserveServerUid, proposal);
-                    byte[] message = server.Recv();
+                    byte[] message = server.Recv(SERVERMSG_TIMEOUT_MS);
+                    if (message == null)
+                    {
+                        //This server is not responding!
+                        //PoolDebug("Server with ID: " + knownServer.Key + " is not responding...");
+                        RemoveServerFromPool(_knownServers.Where(x => (x.GlobalServerId == knownServer.Key)).Single());
+                        break;
+                    }
                     MemoryStream receiveStream = new MemoryStream(message);
                     //If the proposal is not accepted, will increase and try again.
                     if (!StreamUtil.Read<bool>(receiveStream))
@@ -240,6 +250,7 @@ namespace Protophase.Registry
                 }
                 //Loop with proposal candidates until a proposal is accepted. (Should not take more than 1-2 iterations)
             } while (!proposalAccepted);
+            //PoolDebug("Proposal accepted: " + proposal);
             return proposal;
         }
 

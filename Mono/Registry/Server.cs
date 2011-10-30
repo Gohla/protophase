@@ -124,6 +124,9 @@ namespace Protophase.Registry {
             // Get next messages from clients.
             byte[] message = _rpcSocket.Recv(SendRecvOpt.NOBLOCK);
             while(message != null) {
+                PoolDebug("Message size=" + message.Length);
+                //PoolDebug(message.ToString());
+
                 MemoryStream stream = StreamUtil.CreateStream(message);
                 // Read message type
                 RegistryMessageType messageType = (RegistryMessageType)stream.ReadByte();
