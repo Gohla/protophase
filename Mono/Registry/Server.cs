@@ -243,7 +243,6 @@ namespace Protophase.Registry {
         Sends and receives all network messages.
         **/
         public void Update() {
-            Console.WriteLine(DateTime.Now.ToLongTimeString());
             Receive();
             RecieveSubscribed();
             RemoveTimedOutServices();
