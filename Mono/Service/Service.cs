@@ -1,10 +1,11 @@
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Protophase.Shared;
 using ZMQ;
 
@@ -121,7 +122,9 @@ namespace Protophase.Service {
         **/
         private void Initialize() {
             _rpcSocket = _registry.Context.Socket(SocketType.REQ);
+            _rpcSocket.StringToIdentity(_registry.ApplicationID + "_REQ_" + _serviceType, Encoding.ASCII);
             _publishedSocket = _registry.Context.Socket(SocketType.SUB);
+            _publishedSocket.StringToIdentity(_registry.ApplicationID + "_SUB_" + _serviceType, Encoding.ASCII);
         }
 
         /**
@@ -244,7 +247,10 @@ namespace Protophase.Service {
                     message = _rpcSocket.Recv(timeout);
 
                 if(message == null)
+                {
+                    RecreateSockets();
                     throw new System.Exception("RPC call " + name + " failed: Timeout (" + timeout + "ms)");
+                }
 
                 MemoryStream receiveStream = StreamUtil.CreateStream(message);
                 return StreamUtil.ReadWithNullCheck<object>(receiveStream);

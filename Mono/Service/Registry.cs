@@ -64,6 +64,11 @@ namespace Protophase.Service {
         public Context Context { get { return _context; } }
 
         /**
+        Gets the application ID that the registry server assigned.
+        **/
+        public ulong ApplicationID { get { return _applicationID; } }
+
+        /**
         Default constructor. Connects to localhost registry with default ports using the TCP transport. Services are
         hosted using the TCP transport using localhost as remote address.
         **/
